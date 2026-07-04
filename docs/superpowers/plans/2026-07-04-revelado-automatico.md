@@ -1972,21 +1972,20 @@ def test_process_and_stream_events(tmp_path):
     raw.write_bytes(b"x")
     fake = PhotoResult(str(raw), "done")
     with patch("revelado.server.process_photo", return_value=fake):
-        client = _client()
-        r = client.post("/api/process", json={"files": [str(raw)], "overwrite": False})
-        assert r.status_code == 200
-        job_id = r.json()["job_id"]
-        # SSE: leer hasta el evento finished
-        events = []
-        with client.stream("GET", f"/api/jobs/{job_id}/events") as resp:
-            for line in resp.iter_lines():
-                if line.startswith("data: "):
-                    events.append(json.loads(line[6:]))
-                    if events[-1]["type"] == "finished":
-                        break
-        assert events[-1]["ok"] == 1
-        state = client.get(f"/api/jobs/{job_id}").json()
-        assert state["completed"] == 1
+        with _client() as client:  # portal único: la tarea de fondo sobrevive entre peticiones
+            r = client.post("/api/process", json={"files": [str(raw)], "overwrite": False})
+            assert r.status_code == 200
+            job_id = r.json()["job_id"]
+            events = []
+            with client.stream("GET", f"/api/jobs/{job_id}/events") as resp:
+                for line in resp.iter_lines():
+                    if line.startswith("data: "):
+                        events.append(json.loads(line[6:]))
+                        if events[-1]["type"] == "finished":
+                            break
+            assert events[-1]["ok"] == 1
+            state = client.get(f"/api/jobs/{job_id}").json()
+            assert state["completed"] == 1
 
 
 def test_job_not_found():
@@ -2007,7 +2006,7 @@ def test_index_served():
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
 ```
 
-Note: `TestClient` runs the app in a worker thread with a real event loop, so `create_job` (called inside the request) has a running loop. `test_index_served` requires Task 13's `index.html` to exist — create a placeholder now: `revelado/static/index.html` containing `<!-- placeholder -->` (Task 13 replaces it).
+Note: use `with _client() as client:` for tests that span multiple requests — without the context manager each request gets its own event loop and background job tasks die between requests. `test_index_served` requires Task 13's `index.html` to exist — create a placeholder now: `revelado/static/index.html` containing `<!-- placeholder -->` (Task 13 replaces it).
 
 - [ ] **Step 2: Run tests to verify they fail**
 

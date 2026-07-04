@@ -57,21 +57,20 @@ def test_process_and_stream_events(tmp_path):
     raw.write_bytes(b"x")
     fake = PhotoResult(str(raw), "done")
     with patch("revelado.server.process_photo", return_value=fake):
-        client = _client()
-        r = client.post("/api/process", json={"files": [str(raw)], "overwrite": False})
-        assert r.status_code == 200
-        job_id = r.json()["job_id"]
-        # SSE: leer hasta el evento finished
-        events = []
-        with client.stream("GET", f"/api/jobs/{job_id}/events") as resp:
-            for line in resp.iter_lines():
-                if line.startswith("data: "):
-                    events.append(json.loads(line[6:]))
-                    if events[-1]["type"] == "finished":
-                        break
-        assert events[-1]["ok"] == 1
-        state = client.get(f"/api/jobs/{job_id}").json()
-        assert state["completed"] == 1
+        with _client() as client:  # portal único: la tarea de fondo sobrevive entre peticiones
+            r = client.post("/api/process", json={"files": [str(raw)], "overwrite": False})
+            assert r.status_code == 200
+            job_id = r.json()["job_id"]
+            events = []
+            with client.stream("GET", f"/api/jobs/{job_id}/events") as resp:
+                for line in resp.iter_lines():
+                    if line.startswith("data: "):
+                        events.append(json.loads(line[6:]))
+                        if events[-1]["type"] == "finished":
+                            break
+            assert events[-1]["ok"] == 1
+            state = client.get(f"/api/jobs/{job_id}").json()
+            assert state["completed"] == 1
 
 
 def test_job_not_found():
