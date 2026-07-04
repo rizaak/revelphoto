@@ -1,4 +1,5 @@
 import math
+from dataclasses import replace
 
 from revelado.ai import AIDecision
 from revelado.analysis.faces import Face
@@ -35,16 +36,22 @@ def test_compute_with_ai_uses_ai_values():
     assert s.ai_used and s.has_crop
     assert (s.crop_left, s.crop_top, s.crop_right, s.crop_bottom) == AI.crop
     assert s.crop_angle == AI.angle and s.exposure == AI.exposure
-    assert s.temperature == AI.temperature
+    assert s.temperature is None  # sin dominante => As Shot
     assert s.luminance_smoothing > 0  # ISO 3200
     assert len(s.masks) == 1
+
+
+def test_compute_with_ai_strong_cast_uses_custom_wb():
+    ai_calido = replace(AI, temperature=4200)
+    s = compute_settings(METRICS, [], -1.0, ai_calido)
+    assert s.temperature == 4200
 
 
 def test_compute_local_only():
     s = compute_settings(METRICS, [], rotation=-2.0, ai=None)
     assert not s.ai_used and s.has_crop  # rotación != 0 => enderezado activo
     assert s.crop_angle == -2.0            # usa la estimación local
-    assert s.temperature == METRICS.wb_temp
+    assert s.temperature is None  # sin dominante => As Shot
     assert abs(s.exposure) <= 1.0
     # exposición local: llevar luma media hacia ~0.45 de forma conservadora
     assert s.exposure > 0                  # 0.42 < 0.45 => sube un poco

@@ -22,7 +22,7 @@ class RadialMask:
 
 @dataclass
 class DevelopSettings:
-    temperature: int
+    temperature: int | None  # None => "As Shot" (sin dominante de color claro)
     tint: int
     exposure: float
     contrast: int
@@ -57,6 +57,12 @@ def face_mask_for(face: Face) -> RadialMask | None:
     )
 
 
+def _wb_or_none(temp: int, tint: int) -> int | None:
+    # Solo forzamos WB si hay dominante clara; si no, se respeta el "As Shot" del RAW
+    cast = abs(temp - 5500) > SETTINGS.wb_cast_temp_delta or abs(tint) > SETTINGS.wb_cast_tint
+    return temp if cast else None
+
+
 def compute_settings(metrics: GlobalMetrics, faces: list[Face],
                      rotation: float, ai: AIDecision | None) -> DevelopSettings:
     masks = [m for m in (face_mask_for(f) for f in faces) if m is not None]
@@ -65,7 +71,7 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
         has_crop = ai.crop is not None or ai.angle != 0.0
         crop = ai.crop or (0.0, 0.0, 1.0, 1.0)
         return DevelopSettings(
-            temperature=ai.temperature, tint=ai.tint,
+            temperature=_wb_or_none(ai.temperature, ai.tint), tint=ai.tint,
             exposure=ai.exposure, contrast=ai.contrast,
             highlights=ai.highlights, shadows=ai.shadows,
             whites=0, blacks=0,
@@ -88,7 +94,7 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
     highlights = -30 if metrics.clip_highlights > 0.005 else 0
     shadows = 20 if metrics.clip_shadows > 0.005 else 0
     return DevelopSettings(
-        temperature=metrics.wb_temp, tint=metrics.wb_tint,
+        temperature=_wb_or_none(metrics.wb_temp, metrics.wb_tint), tint=metrics.wb_tint,
         exposure=round(exposure, 2), contrast=0,
         highlights=highlights, shadows=shadows, whites=0, blacks=0,
         sharpness=sharpening_for(metrics.sharpness),

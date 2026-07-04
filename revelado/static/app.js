@@ -108,6 +108,7 @@ $("process").onclick = async () => {
       $("progress-title").textContent = "¡Terminado!";
       $("progress-text").textContent =
         `${ev.ok} de ${ev.total} fotos listas` +
+        (ev.skipped ? `, ${ev.skipped} saltadas (ya tenían XMP)` : "") +
         (ev.errors ? `, ${ev.errors} con error` : "") +
         ". Ya puedes importar la carpeta en Lightroom (o Metadatos → Leer metadatos desde archivos).";
       $("done-actions").hidden = false;
@@ -116,6 +117,7 @@ $("process").onclick = async () => {
     }
   };
   source.onerror = () => {
+    if (source.readyState !== EventSource.CLOSED) return;
     source.close();
     $("progress-title").textContent = "Conexión perdida";
     $("progress-text").textContent =

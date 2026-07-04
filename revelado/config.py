@@ -15,7 +15,8 @@ class Settings:
     max_face_ev: float = 1.5
     max_global_exposure: float = 1.0
     max_crop_angle: float = 10.0
-    api_concurrency: int = 4
+    wb_cast_temp_delta: int = 800   # desviación de 5500K que consideramos dominante de color
+    wb_cast_tint: int = 25
     worker_concurrency: int = 4
     api_max_tokens: int = 1024
     raw_extensions: tuple[str, ...] = (".cr2", ".cr3")

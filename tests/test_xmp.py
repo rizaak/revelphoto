@@ -47,6 +47,16 @@ def test_render_mask_normalization():
     ET.fromstring(text)  # sigue siendo XML válido
 
 
+def test_render_as_shot_when_no_temperature():
+    s = _settings()
+    s.temperature = None
+    text = render_xmp(s)
+    assert 'crs:WhiteBalance="As Shot"' in text
+    assert "crs:Temperature=" not in text
+    assert "crs:Tint=" not in text
+    ET.fromstring(text)  # sigue siendo XML válido
+
+
 def test_render_without_crop_or_masks():
     s = _settings()
     s.has_crop = False

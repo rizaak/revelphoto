@@ -52,6 +52,15 @@ def _mask_xml(m: RadialMask) -> str:
 
 
 def render_xmp(s: DevelopSettings) -> str:
+    if s.temperature is None:
+        wb_attrs = """
+   crs:WhiteBalance="As Shot\""""
+    else:
+        wb_attrs = f"""
+   crs:WhiteBalance="Custom"
+   crs:Temperature="{s.temperature}"
+   crs:Tint="{_fmt_signed_int(s.tint)}\""""
+
     crop_attrs = ""
     if s.has_crop:
         crop_attrs = f"""
@@ -76,10 +85,7 @@ def render_xmp(s: DevelopSettings) -> str:
   <rdf:Description rdf:about=""
    xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
    crs:Version="11.0"
-   crs:ProcessVersion="11.0"
-   crs:WhiteBalance="Custom"
-   crs:Temperature="{s.temperature}"
-   crs:Tint="{_fmt_signed_int(s.tint)}"
+   crs:ProcessVersion="11.0"{wb_attrs}
    crs:Exposure2012="{_fmt_signed_float(s.exposure)}"
    crs:Contrast2012="{_fmt_signed_int(s.contrast)}"
    crs:Highlights2012="{_fmt_signed_int(s.highlights)}"

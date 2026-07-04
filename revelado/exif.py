@@ -21,6 +21,11 @@ def _run(args: list[str]) -> bytes:
     return result.stdout
 
 
+def _int_tag(tags: dict, key: str, default: int) -> int:
+    value = tags.get(key)
+    return default if value is None else int(value)
+
+
 def read_exif(raw_path: Path) -> ExifData:
     out = _run(["exiftool", "-j", "-n", "-ISO", "-Orientation",
                 "-ImageWidth", "-ImageHeight", str(raw_path)])
@@ -29,10 +34,10 @@ def read_exif(raw_path: Path) -> ExifData:
     except (json.JSONDecodeError, IndexError):
         tags = {}
     return ExifData(
-        iso=int(tags.get("ISO") or 100),
-        orientation=int(tags.get("Orientation") or 1),
-        width=int(tags.get("ImageWidth") or 0),
-        height=int(tags.get("ImageHeight") or 0),
+        iso=_int_tag(tags, "ISO", 100),
+        orientation=_int_tag(tags, "Orientation", 1),
+        width=_int_tag(tags, "ImageWidth", 0),
+        height=_int_tag(tags, "ImageHeight", 0),
     )
 
 

@@ -31,7 +31,10 @@ class JobManager:
         job = self._jobs.get(job_id)
         if job is None:
             return None
-        return {k: job[k] for k in ("id", "total", "completed", "running", "results")}
+        return {
+            "id": job["id"], "total": job["total"], "completed": job["completed"],
+            "running": job["running"], "results": list(job["results"]),
+        }
 
     async def _emit(self, job: dict, event: dict) -> None:
         async with job["condition"]:
@@ -72,11 +75,13 @@ class JobManager:
         await asyncio.gather(*(one(p) for p in paths))
         ok = sum(1 for r in job["results"] if r["status"].startswith("done"))
         errors = sum(1 for r in job["results"] if r["status"] == "error")
+        skipped = sum(1 for r in job["results"] if r["status"] == "skipped_existing")
         job["running"] = False
         await self._emit(job, {"type": "finished", "total": job["total"],
-                               "ok": ok, "errors": errors})
+                               "ok": ok, "errors": errors, "skipped": skipped})
         self._on_finish("Revelado terminado",
                         f"{ok} de {job['total']} fotos procesadas"
+                        + (f", {skipped} saltadas" if skipped else "")
                         + (f", {errors} con error" if errors else ""))
 
     async def events(self, job_id: str):

@@ -1269,7 +1269,7 @@ git add revelado/develop.py tests/test_develop.py && git commit -m "feat: cálcu
 - Produces:
   - `SidecarExists(Exception)`
   - `sidecar_path(raw_path: Path) -> Path` — `IMG_0001.CR3` → `IMG_0001.xmp` (same directory, lowercase `.xmp`)
-  - `render_xmp(s: DevelopSettings) -> str` — full XMP document, `crs` namespace, ProcessVersion 11.0 (PV2012); radial masks as `crs:CircularGradientBasedCorrections` (local values normalized: exposure stored as EV/4, shadows as value/100)
+  - `render_xmp(s: DevelopSettings) -> str` — full XMP document, `crs` namespace, ProcessVersion 11.0 (PV2012); radial masks as `crs:CircularGradientBasedCorrections` (local values normalized: exposure stored as EV/4, shadows as value/100); temperature=None ⇒ WhiteBalance "As Shot" sin Temperature/Tint
   - `write_sidecar(raw_path: Path, s: DevelopSettings, overwrite: bool = False) -> Path` — raises `SidecarExists` if the file exists and `overwrite` is False
   - `delete_sidecar(raw_path: Path) -> bool`
 
@@ -2517,6 +2517,9 @@ Import the `samples/` folder into Lightroom Classic. Verify for each photo:
 3. Faces in shadow show a radial mask in the Masking panel, affecting only the face region, with local exposure ≈ the computed EV. If the mask affects the *outside* of the ellipse instead of the inside, flip `<crs:Flipped>` in `xmp.py:_mask_xml` and re-run `test_xmp.py` after updating the assertion.
 4. A tilted photo is leveled, not doubled — if doubled, flip the sign in `horizon.py:estimate_rotation` (see Task 6 note).
 5. Deleting the `.xmp` and re-reading metadata returns the photo to default — proves nothing else was touched.
+6. Caso combinado: una foto con cara en sombra Y recorte propuesto por la IA — la máscara debe caer sobre la cara tras aplicar el recorte (valida el espacio de coordenadas).
+7. Balance de blancos: comparar una foto neutra (debe quedar "As Shot") y una con dominante (debe corregirse) contra el original.
+8. Confirmar que Lightroom acepta el XMP sin envoltorio <?xpacket?>.
 
 - [ ] **Step 4: Fix findings, re-run full suite, commit**
 
