@@ -1,0 +1,92 @@
+import json
+import time
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+from fastapi.testclient import TestClient
+
+from revelado.exif import ExifData
+from revelado.jobs import JobManager
+from revelado.pipeline import PhotoResult
+from revelado.server import create_app
+
+
+def _client():
+    app = create_app(job_manager=JobManager(on_finish=MagicMock()),
+                     client_factory=lambda: None)
+    return TestClient(app)
+
+
+def test_browse_lists_dirs(tmp_path):
+    (tmp_path / "sesion1").mkdir()
+    (tmp_path / "sesion1" / "IMG_1.CR3").write_bytes(b"x")
+    (tmp_path / "archivo.txt").write_text("no soy carpeta")
+    r = _client().get("/api/browse", params={"path": str(tmp_path)})
+    assert r.status_code == 200
+    dirs = r.json()["dirs"]
+    assert [d["name"] for d in dirs] == ["sesion1"]
+    assert dirs[0]["raw_count"] == 1
+
+
+def test_photos_lists_raws_with_xmp_flag(tmp_path):
+    (tmp_path / "IMG_2.CR2").write_bytes(b"x")
+    (tmp_path / "IMG_1.CR3").write_bytes(b"x")
+    (tmp_path / "IMG_1.xmp").write_text("previo")
+    (tmp_path / "nota.txt").write_text("ignorar")
+    r = _client().get("/api/photos", params={"dir": str(tmp_path)})
+    photos = r.json()["photos"]
+    assert [p["name"] for p in photos] == ["IMG_1.CR3", "IMG_2.CR2"]
+    assert photos[0]["has_xmp"] is True and photos[1]["has_xmp"] is False
+
+
+def test_thumb_returns_jpeg(tmp_path):
+    raw = tmp_path / "IMG_1.CR3"
+    raw.write_bytes(b"x")
+    img = np.full((100, 150, 3), 90, dtype=np.uint8)
+    with patch("revelado.server.read_exif", return_value=ExifData(100, 1, 0, 0)), \
+         patch("revelado.server.extract_preview_jpeg", return_value=b"\xff\xd8x"), \
+         patch("revelado.server.decode_upright", return_value=img):
+        r = _client().get("/api/thumb", params={"path": str(raw)})
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/jpeg"
+
+
+def test_process_and_stream_events(tmp_path):
+    raw = tmp_path / "IMG_1.CR3"
+    raw.write_bytes(b"x")
+    fake = PhotoResult(str(raw), "done")
+    with patch("revelado.server.process_photo", return_value=fake):
+        client = _client()
+        r = client.post("/api/process", json={"files": [str(raw)], "overwrite": False})
+        assert r.status_code == 200
+        job_id = r.json()["job_id"]
+        # SSE: leer hasta el evento finished
+        events = []
+        with client.stream("GET", f"/api/jobs/{job_id}/events") as resp:
+            for line in resp.iter_lines():
+                if line.startswith("data: "):
+                    events.append(json.loads(line[6:]))
+                    if events[-1]["type"] == "finished":
+                        break
+        assert events[-1]["ok"] == 1
+        state = client.get(f"/api/jobs/{job_id}").json()
+        assert state["completed"] == 1
+
+
+def test_job_not_found():
+    assert _client().get("/api/jobs/nope").status_code == 404
+
+
+def test_delete_xmp(tmp_path):
+    raw = tmp_path / "IMG_1.CR3"
+    raw.write_bytes(b"x")
+    (tmp_path / "IMG_1.xmp").write_text("x")
+    c = _client()
+    assert c.delete("/api/xmp", params={"path": str(raw)}).json()["deleted"] is True
+    assert c.delete("/api/xmp", params={"path": str(raw)}).json()["deleted"] is False
+
+
+def test_index_served():
+    r = _client().get("/")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
