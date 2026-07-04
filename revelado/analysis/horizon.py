@@ -13,7 +13,8 @@ def estimate_rotation(img_bgr: np.ndarray) -> float:
     if lines is None:
         return 0.0
     angles = []
-    for x1, y1, x2, y2 in lines:
+    # HoughLinesP devuelve (N,1,4) en OpenCV 4.x y (N,4) en 5.x; normalizamos
+    for x1, y1, x2, y2 in lines.reshape(-1, 4):
         if x2 == x1:
             continue
         ang = np.degrees(np.arctan2(y1 - y2, x2 - x1))  # y invertida (imagen)
