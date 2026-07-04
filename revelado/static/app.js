@@ -20,7 +20,7 @@ async function loadDirs(path = "") {
   ul.innerHTML = "";
   const up = document.createElement("li");
   up.textContent = "⬆︎ Subir";
-  up.onclick = () => loadDirs(data.parent);
+  up.onclick = () => loadDirs(data.parent || "");
   ul.appendChild(up);
   for (const d of data.dirs) {
     const li = document.createElement("li");
@@ -115,6 +115,13 @@ $("process").onclick = async () => {
         new Notification("Revelado terminado", { body: $("progress-text").textContent });
     }
   };
+  source.onerror = () => {
+    source.close();
+    $("progress-title").textContent = "Conexión perdida";
+    $("progress-text").textContent =
+      "Se perdió la conexión con el servidor. Las fotos ya procesadas conservan su XMP; recarga la página para reintentar.";
+    $("done-actions").hidden = false;
+  };
 };
 
 $("restart").onclick = () => loadDirs(state.dir ? state.dir.split("/").slice(0, -1).join("/") : "");
@@ -166,11 +173,16 @@ function renderReview() {
       source.onmessage = (msg) => {
         const e = JSON.parse(msg.data);
         if (e.type === "photo") {
-          ev.adjust = e.adjust;
-          card.classList.remove("discarded");
+          if (e.status === "error") {
+            alert(`Error al reprocesar ${name}: ${e.message || ""}`);
+          } else {
+            ev.adjust = e.adjust;
+            card.classList.remove("discarded");
+          }
         }
         if (e.type === "finished") { source.close(); renderReview(); }
       };
+      source.onerror = () => { source.close(); card.style.opacity = "1"; };
     };
     grid.appendChild(card);
   }
