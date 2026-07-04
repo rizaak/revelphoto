@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-from dataclasses import asdict
 from pathlib import Path
 from typing import Callable
 
@@ -49,16 +48,21 @@ class JobManager:
                 except Exception as exc:
                     result = PhotoResult(str(path), "error",
                                          f"{type(exc).__name__}: {exc}")
-            entry = {"path": result.path, "status": result.status,
-                     "message": result.message}
-            if result.settings is not None:
-                s = result.settings
-                entry["adjust"] = {
-                    "exposure": s.exposure, "angle": s.crop_angle,
-                    "crop": [s.crop_left, s.crop_top, s.crop_right, s.crop_bottom]
-                            if s.has_crop else None,
-                    "masks": len(s.masks),
-                }
+            try:
+                entry = {"path": result.path, "status": result.status,
+                         "message": result.message}
+                if result.settings is not None:
+                    s = result.settings
+                    entry["adjust"] = {
+                        "exposure": s.exposure, "angle": s.crop_angle,
+                        "crop": [s.crop_left, s.crop_top, s.crop_right, s.crop_bottom]
+                                if s.has_crop else None,
+                        "masks": len(s.masks),
+                    }
+            except Exception as exc:
+                # Nunca dejar el lote sin evento: convertir en error
+                entry = {"path": str(path), "status": "error",
+                         "message": f"{type(exc).__name__}: {exc}"}
             job["results"].append(entry)
             job["completed"] += 1
             await self._emit(job, {"type": "photo", **entry,
