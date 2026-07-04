@@ -1,1 +1,51 @@
-<!-- placeholder -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Revelado — asistente para Lightroom</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Revelado</h1>
+    <p id="subtitle">Selecciona la carpeta de la sesión</p>
+  </header>
+
+  <section id="browser">
+    <div id="crumb"></div>
+    <ul id="dirs"></ul>
+  </section>
+
+  <section id="gallery" hidden>
+    <div class="toolbar">
+      <button id="back">← Carpetas</button>
+      <button id="select-all">Seleccionar todas</button>
+      <label><input type="checkbox" id="overwrite"> Sobrescribir XMP existentes</label>
+      <button id="process" class="primary" disabled>Procesar seleccionadas</button>
+    </div>
+    <div id="grid"></div>
+  </section>
+
+  <section id="progress" hidden>
+    <h2 id="progress-title">Procesando…</h2>
+    <div class="bar"><div id="bar-fill"></div></div>
+    <p id="progress-text"></p>
+    <ul id="log"></ul>
+    <div class="toolbar" id="done-actions" hidden>
+      <button id="show-review" class="primary">Revisar resultados</button>
+      <button id="restart">Procesar otra carpeta</button>
+    </div>
+  </section>
+
+  <section id="review" hidden>
+    <div class="toolbar">
+      <button id="review-back">← Progreso</button>
+      <p>Antes / después (simulación aproximada). Descarta las que no te convenzan antes de ir a Lightroom.</p>
+    </div>
+    <div id="review-grid"></div>
+  </section>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
