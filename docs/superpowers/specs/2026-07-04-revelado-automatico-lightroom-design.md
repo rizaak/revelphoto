@@ -58,7 +58,7 @@ App local en Python que corre en el Mac del usuario y sirve una interfaz web en 
    - ISO → nivel de reducción de ruido de luminancia.
    - Detección de horizonte/verticales (transformada de Hough) → ángulo de enderezado candidato.
 3. **Decisión estética (API de Claude, modelo `claude-haiku-4-5` con visión):** recibe la preview reducida + las métricas locales y devuelve JSON con: recorte propuesto (composición, sujeto bien situado), ángulo fino de enderezado, y validación/ajuste de los valores de exposición y color. Salida estructurada y acotada (la app aplica límites de seguridad a todos los valores).
-4. **Cálculo de máscaras de rostro:** para cada cara con luminosidad bajo el umbral, se genera una máscara radial (óvalo con degradado suave centrado en la cara, en coordenadas relativas al recorte final) con su subida de exposición/sombras individual.
+4. **Cálculo de máscaras de rostro:** para cada cara con luminosidad media inferior al umbral (por defecto 35% — configurable), se genera una máscara radial (óvalo con degradado suave centrado en la cara, en coordenadas relativas al recorte final) con su subida de exposición/sombras individual, calculada para llevar el rostro a la zona objetivo (45–55%) con un tope de +1.5 EV local.
 5. **Escritura del XMP** (namespace `crs` de Camera Raw, ProcessVersion actual):
    - Globales: `Temperature`, `Tint`, `Exposure2012`, `Contrast2012`, `Highlights2012`, `Shadows2012`, `Whites2012`, `Blacks2012`, `Sharpness`, `SharpenRadius`, `LuminanceSmoothing`.
    - Geometría: `CropLeft/Top/Right/Bottom`, `CropAngle`, `HasCrop`.
