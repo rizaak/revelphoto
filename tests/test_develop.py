@@ -42,7 +42,7 @@ def test_compute_with_ai_uses_ai_values():
 
 def test_compute_local_only():
     s = compute_settings(METRICS, [], rotation=-2.0, ai=None)
-    assert not s.ai_used and not s.has_crop
+    assert not s.ai_used and s.has_crop  # rotación != 0 => enderezado activo
     assert s.crop_angle == -2.0            # usa la estimación local
     assert s.temperature == METRICS.wb_temp
     assert abs(s.exposure) <= 1.0
