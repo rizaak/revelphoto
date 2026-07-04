@@ -2,6 +2,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)'; then
+  echo "Se necesita Python 3.10 o superior"; exit 1
+fi
+
 if ! command -v exiftool >/dev/null; then
   echo "Instalando exiftool con Homebrew..."
   brew install exiftool

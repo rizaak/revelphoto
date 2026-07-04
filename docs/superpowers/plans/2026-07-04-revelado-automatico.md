@@ -6,7 +6,7 @@
 
 **Architecture:** FastAPI backend serving a vanilla HTML/JS frontend. Per-photo pipeline: exiftool extracts the embedded JPEG preview → local analysis (OpenCV YuNet faces, histogram, gray-world WB, Laplacian sharpness, Hough horizon) → one Claude API call (vision + structured JSON) for aesthetic crop/fine-tune → XMP sidecar written next to the RAW. Jobs run concurrently with SSE progress events.
 
-**Tech Stack:** Python 3.11+, FastAPI + Uvicorn, `anthropic` SDK (model `claude-haiku-4-5`, base64 image blocks, `output_config.format` json_schema), OpenCV (YuNet ONNX), NumPy, exiftool (subprocess), pytest + httpx TestClient. Frontend: plain HTML/CSS/JS with `EventSource` (SSE).
+**Tech Stack:** Python 3.10+, FastAPI + Uvicorn, `anthropic` SDK (model `claude-haiku-4-5`, base64 image blocks, `output_config.format` json_schema), OpenCV (YuNet ONNX), NumPy, exiftool (subprocess), pytest + httpx TestClient. Frontend: plain HTML/CSS/JS with `EventSource` (SSE).
 
 ## Global Constraints
 
@@ -17,7 +17,7 @@
 - API failure ⇒ **local-only mode** (photo still processed, status `done_local_only`), never a batch failure.
 - Model ID is exactly `claude-haiku-4-5` (no date suffix). Only a ~1500px preview is ever sent to the API.
 - Port **8420**. All numeric defaults live in `revelado/config.py` — no magic numbers elsewhere.
-- Python 3.11+. Tests run with `python -m pytest`. Commit after every task.
+- Python 3.10+. Tests run with `python -m pytest`. Commit after every task.
 - All user-facing strings (frontend, notifications, API error messages) in **Spanish**.
 
 ## File Structure

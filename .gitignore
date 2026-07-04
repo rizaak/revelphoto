@@ -3,3 +3,5 @@ __pycache__/
 models/*.onnx
 samples/
 .pytest_cache/
+.claude/
+.superpowers/
