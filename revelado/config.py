@@ -29,6 +29,8 @@ class Settings:
     face_lum_threshold: float = 0.35
     face_lum_target: float = 0.50
     max_face_ev: float = 1.5
+    min_face_ev: float = -0.5        # oscurecer una cara quemada, como mucho
+    min_face_lift_apply: float = 0.1  # por debajo no vale la pena una máscara
     max_global_exposure: float = 1.0
     max_total_exposure: float = 1.5  # tope con el sesgo de sesión incluido
     max_crop_angle: float = 10.0

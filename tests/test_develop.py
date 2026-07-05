@@ -97,3 +97,31 @@ def test_bias_applies_in_local_mode_too():
                          exposure_bias=0.3, temp_bias=250)
     assert s.temperature == 5450
     assert s.exposure > 0.3  # exposición local + sesgo
+
+
+def test_ai_face_lift_creates_mask_on_bright_face():
+    """La IA puede pedir máscara aunque la cara no baje del umbral mecánico."""
+    ai_lift = replace(AI, face_lifts=((0, 0.6),))
+    s = compute_settings(METRICS, [Face(0.4, 0.3, 0.1, 0.12, luma=0.50)], 0.0,
+                         ai_lift, as_shot_temp=5200)
+    assert len(s.masks) == 1 and s.masks[0].exposure_ev == 0.6
+
+
+def test_threshold_safety_net_when_ai_omits_dark_face():
+    s = compute_settings(METRICS, [Face(0.4, 0.3, 0.1, 0.12, luma=0.20)], 0.0,
+                         AI, as_shot_temp=5200)  # AI sin face_lifts
+    assert len(s.masks) == 1  # regla dura del producto
+
+
+def test_tiny_or_invalid_lifts_ignored():
+    ai_lift = replace(AI, face_lifts=((0, 0.05), (7, 1.0)))  # ínfimo e índice inexistente
+    s = compute_settings(METRICS, [Face(0.4, 0.3, 0.1, 0.12, luma=0.50)], 0.0,
+                         ai_lift, as_shot_temp=5200)
+    assert s.masks == []
+
+
+def test_negative_lift_darkens_burnt_face():
+    ai_lift = replace(AI, face_lifts=((0, -0.4),))
+    s = compute_settings(METRICS, [Face(0.4, 0.3, 0.1, 0.12, luma=0.85)], 0.0,
+                         ai_lift, as_shot_temp=5200)
+    assert s.masks[0].exposure_ev == -0.4 and s.masks[0].shadows == 0

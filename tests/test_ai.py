@@ -12,7 +12,8 @@ METRICS = GlobalMetrics(mean_luma=0.4, clip_shadows=0.01, clip_highlights=0.0,
                         wb_temp=5200, wb_tint=5, sharpness=300.0, iso=400)
 VALID = {"crop": {"left": 0.05, "top": 0.02, "right": 0.98, "bottom": 0.95},
          "angle": -1.2, "exposure": 0.4, "contrast": 12, "highlights": -25,
-         "shadows": 30, "temp_shift": -200, "tint_shift": 4}
+         "shadows": 30, "temp_shift": -200, "tint_shift": 4,
+         "face_lifts": [{"index": 0, "ev": 0.8}]}
 
 
 def _client_returning(payload: str, stop_reason: str = "end_turn"):
@@ -83,3 +84,13 @@ def test_session_prompt_included_in_system():
     system = client.messages.create.call_args.kwargs["system"]
     assert "quiero un look luminoso" in system
     assert "ESTA sesión" in system
+
+
+def test_face_lifts_parsed_and_clamped():
+    d = decide(_client_returning(json.dumps(VALID)), b"", METRICS, [], 0.0)
+    assert d.face_lifts == ((0, 0.8),)
+    wild = AIDecision(crop=None, angle=0, exposure=0, contrast=0, highlights=0,
+                      shadows=0, temp_shift=0, tint_shift=0,
+                      face_lifts=((0, 9.0), (1, -3.0)))
+    c = clamp_decision(wild)
+    assert c.face_lifts == ((0, 1.5), (1, -0.5))

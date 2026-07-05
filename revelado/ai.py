@@ -21,6 +21,7 @@ class AIDecision:
     shadows: int
     temp_shift: int  # desviación en Kelvin respecto al WB de cámara (+ = más cálido)
     tint_shift: int  # desviación de tinte (+ = más magenta)
+    face_lifts: tuple[tuple[int, float], ...] = ()  # (índice de cara, EV local)
 
 
 _CROP_PROPS = {k: {"type": "number"} for k in ("left", "top", "right", "bottom")}
@@ -39,9 +40,14 @@ DECISION_SCHEMA = {
         "shadows": {"type": "integer"},
         "temp_shift": {"type": "integer"},
         "tint_shift": {"type": "integer"},
+        "face_lifts": {"type": "array", "items": {
+            "type": "object",
+            "properties": {"index": {"type": "integer"}, "ev": {"type": "number"}},
+            "required": ["index", "ev"], "additionalProperties": False,
+        }},
     },
     "required": ["crop", "angle", "exposure", "contrast", "highlights",
-                 "shadows", "temp_shift", "tint_shift"],
+                 "shadows", "temp_shift", "tint_shift", "face_lifts"],
     "additionalProperties": False,
 }
 
@@ -64,7 +70,13 @@ _SYSTEM = (
     "Enderezado (angle, en grados): usa un valor distinto de 0 SOLO si ves en la imagen "
     "una referencia claramente inclinada (horizonte, línea de mar, marco de puerta, "
     "columnas, encimera). La estimación local dada es orientativa y poco fiable en "
-    "retratos; una inclinación leve suele ser intencional. En caso de duda, devuelve 0."
+    "retratos; una inclinación leve suele ser intencional. En caso de duda, devuelve 0.\n"
+    "Rostros (face_lifts): recibes cada cara con su índice y su luminosidad medida "
+    "(0-1). Si un rostro necesita corrección LOCAL de luz — contraluz, lado en sombra, "
+    "notablemente más apagado que los demás o que el fondo — inclúyelo como "
+    "{index, ev}: ev positivo lo aclara (típico 0.3 a 1.2), negativo leve (hasta -0.5) "
+    "si está quemado. Se aplicará como máscara radial SOLO sobre esa cara, sin tocar "
+    "el resto de la imagen. Si ningún rostro lo necesita, devuelve []."
 )
 
 
@@ -128,6 +140,8 @@ def decide(client, preview_jpeg: bytes, metrics: GlobalMetrics,
             shadows=int(data["shadows"]),
             temp_shift=int(data["temp_shift"]),
             tint_shift=int(data["tint_shift"]),
+            face_lifts=tuple((int(f["index"]), float(f["ev"]))
+                             for f in data.get("face_lifts", [])),
         ))
     except AIUnavailable:
         raise
@@ -155,4 +169,6 @@ def clamp_decision(d: AIDecision) -> AIDecision:
         shadows=min(max(d.shadows, -100), 100),
         temp_shift=min(max(d.temp_shift, -SETTINGS.max_temp_shift), SETTINGS.max_temp_shift),
         tint_shift=min(max(d.tint_shift, -SETTINGS.max_tint_shift), SETTINGS.max_tint_shift),
+        face_lifts=tuple((i, min(max(ev, SETTINGS.min_face_ev), SETTINGS.max_face_ev))
+                         for i, ev in d.face_lifts),
     )

@@ -43,19 +43,39 @@ class DevelopSettings:
     temp_shift: int = 0  # desviación aplicada respecto al WB de cámara (para la simulación)
 
 
-def face_mask_for(face: Face) -> RadialMask | None:
-    if face.luma >= SETTINGS.face_lum_threshold:
+def face_mask_for(face: Face, ev: float | None = None) -> RadialMask | None:
+    """Máscara radial para una cara.
+
+    Con `ev` explícito (decisión de la IA) se usa ese valor; sin él aplica la
+    regla dura del producto: caras bajo el umbral se levantan hacia el objetivo.
+    """
+    if ev is None:
+        if face.luma >= SETTINGS.face_lum_threshold:
+            return None
+        ev = math.log2(SETTINGS.face_lum_target / max(face.luma, 0.05))
+        ev = min(ev, SETTINGS.max_face_ev)
+    elif abs(ev) < SETTINGS.min_face_lift_apply:
         return None
-    ev = math.log2(SETTINGS.face_lum_target / max(face.luma, 0.05))
-    ev = min(ev, SETTINGS.max_face_ev)
     cx, cy = face.x + face.w / 2, face.y + face.h / 2
     hw, hh = face.w * MASK_EXPANSION / 2, face.h * MASK_EXPANSION / 2
     return RadialMask(
         left=max(0.0, cx - hw), top=max(0.0, cy - hh),
         right=min(1.0, cx + hw), bottom=min(1.0, cy + hh),
         exposure_ev=round(ev, 2),
-        shadows=25,
+        shadows=25 if ev > 0 else 0,
     )
+
+
+def _masks_from_ai(faces: list[Face], ai: AIDecision) -> list[RadialMask]:
+    """Máscaras según la IA, con la regla del umbral como red de seguridad."""
+    lifts = {i: ev for i, ev in ai.face_lifts if 0 <= i < len(faces)}
+    masks = []
+    for idx, face in enumerate(faces):
+        mask = (face_mask_for(face, ev=lifts[idx]) if idx in lifts
+                else face_mask_for(face))
+        if mask is not None:
+            masks.append(mask)
+    return masks
 
 
 def _wb_from_shift(as_shot_temp: int | None, temp_shift: int,
@@ -93,9 +113,8 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
                      as_shot_temp: int | None = None,
                      exposure_bias: float = 0.0,
                      temp_bias: int = 0) -> DevelopSettings:
-    masks = [m for m in (face_mask_for(f) for f in faces) if m is not None]
-
     if ai is not None:
+        masks = _masks_from_ai(faces, ai)
         has_crop = ai.crop is not None or ai.angle != 0.0
         crop = ai.crop or (0.0, 0.0, 1.0, 1.0)
         temperature, tint = _wb_from_shift(as_shot_temp, ai.temp_shift, ai.tint_shift)
@@ -115,6 +134,7 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
         ), as_shot_temp, exposure_bias, temp_bias)
 
     # Modo solo-local: correcciones técnicas conservadoras
+    masks = [m for m in (face_mask_for(f) for f in faces) if m is not None]
     target = 0.45
     exposure = 0.0
     if metrics.mean_luma > 0.02:
