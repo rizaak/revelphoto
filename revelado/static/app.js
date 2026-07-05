@@ -30,17 +30,55 @@ async function loadDirs(path = "") {
     ul.appendChild(li);
   }
   show("browser");
-  $("subtitle").textContent = "Selecciona la carpeta de la sesión (las que tienen RAW se abren como galería)";
+  $("subtitle").textContent = "Selecciona una carpeta o una fuente del catálogo de Lightroom";
+}
+
+// --- Catálogo de Lightroom (solo lectura) ---
+async function loadLrcat() {
+  const box = $("lrcat");
+  box.innerHTML = "";
+  try {
+    const { catalogs } = await api("/api/lrcat/catalogs");
+    if (!catalogs.length) return;
+    const cat = catalogs[0];
+    const { folders, collections } = await api(
+      `/api/lrcat/sources?cat=${encodeURIComponent(cat.path)}`);
+    if (!folders.length && !collections.length) return;
+    const title = document.createElement("div");
+    title.className = "lr-title";
+    title.textContent = `📔 Catálogo de Lightroom (${cat.name})`;
+    box.appendChild(title);
+    const ul = document.createElement("ul");
+    ul.id = "lr-sources";
+    for (const f of folders) {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>📁 ${f.name}</span><span class="raw-count">${f.count} RAW</span>`;
+      li.onclick = () => openLrGallery(cat.path, "folder", f.id, `LR · ${f.name}`);
+      ul.appendChild(li);
+    }
+    for (const c of collections) {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>🗂 ${c.name}</span><span class="raw-count">${c.count} RAW</span>`;
+      li.onclick = () => openLrGallery(cat.path, "collection", c.id, `LR · ${c.name}`);
+      ul.appendChild(li);
+    }
+    box.appendChild(ul);
+  } catch (e) {
+    box.innerHTML = `<div class="lr-title">📔 Lightroom: ${e.message}</div>`;
+  }
+}
+
+async function openLrGallery(cat, type, id, subtitle) {
+  const data = await api(`/api/lrcat/photos?cat=${encodeURIComponent(cat)}&type=${type}&id=${id}`);
+  renderGallery(data.photos.filter((p) => !p.missing), subtitle);
 }
 
 // --- Pantalla 2: galería ---
-async function openGallery(dir) {
-  state.dir = dir;
+function renderGallery(photos, subtitle) {
   state.selected.clear();
-  const data = await api(`/api/photos?dir=${encodeURIComponent(dir)}`);
   const grid = $("grid");
   grid.innerHTML = "";
-  for (const p of data.photos) {
+  for (const p of photos) {
     const div = document.createElement("div");
     div.className = "photo";
     div.dataset.path = p.path;
@@ -56,10 +94,16 @@ async function openGallery(dir) {
     };
     grid.appendChild(div);
   }
-  $("subtitle").textContent = dir;
+  $("subtitle").textContent = subtitle;
   $("process").disabled = true;
   $("process").textContent = "Procesar seleccionadas";
   show("gallery");
+}
+
+async function openGallery(dir) {
+  state.dir = dir;
+  const data = await api(`/api/photos?dir=${encodeURIComponent(dir)}`);
+  renderGallery(data.photos, dir);
 }
 
 $("back").onclick = () => loadDirs(state.dir ? state.dir.split("/").slice(0, -1).join("/") : "");
@@ -203,3 +247,4 @@ $("show-review").onclick = renderReview;
 $("review-back").onclick = () => show("progress");
 
 loadDirs();
+loadLrcat();

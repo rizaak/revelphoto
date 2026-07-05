@@ -16,6 +16,9 @@ from revelado.exif import extract_preview_jpeg, read_exif
 from revelado.imageio import decode_upright, encode_jpeg
 from revelado.jobs import JobManager
 from revelado.harmonize import harmonize
+from revelado.lrcat import CatalogLocked, find_catalogs
+from revelado.lrcat import photos as lrcat_photos
+from revelado.lrcat import sources as lrcat_sources
 from revelado.pipeline import analyze_photo, finalize_photo
 from revelado.simulate import simulate
 from revelado.xmp import delete_sidecar, sidecar_path
@@ -114,6 +117,33 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
                        temp_shift=temp_shift, tint=tint, angle=angle,
                        crop=crop_rect)
         return Response(encode_jpeg(out, quality=80), media_type="image/jpeg")
+
+    @app.get("/api/lrcat/catalogs")
+    def lr_catalogs():
+        return {"catalogs": [{"path": str(c), "name": c.stem}
+                             for c in find_catalogs()]}
+
+    @app.get("/api/lrcat/sources")
+    def lr_sources(cat: str):
+        cat_path = Path(cat)
+        if not cat_path.exists():
+            raise HTTPException(404, "Catálogo no encontrado")
+        try:
+            return lrcat_sources(cat_path)
+        except CatalogLocked:
+            raise HTTPException(423, "El catálogo está bloqueado por Lightroom; ciérralo e inténtalo de nuevo")
+
+    @app.get("/api/lrcat/photos")
+    def lr_photos(cat: str, type: str, id: int):
+        if type not in ("folder", "collection"):
+            raise HTTPException(400, "type debe ser folder o collection")
+        try:
+            paths = lrcat_photos(Path(cat), type, id)
+        except CatalogLocked:
+            raise HTTPException(423, "El catálogo está bloqueado por Lightroom; ciérralo e inténtalo de nuevo")
+        return {"photos": [{"name": p.name, "path": str(p),
+                            "has_xmp": sidecar_path(p).exists(),
+                            "missing": not p.exists()} for p in paths]}
 
     @app.post("/api/process")
     async def process(req: ProcessRequest):

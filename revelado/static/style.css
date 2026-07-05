@@ -46,3 +46,10 @@ button:disabled { opacity: .4; cursor: default; }
 .review-card .actions { display: flex; gap: .5rem; margin-top: .5rem; }
 .review-card .actions button { font-size: .8rem; padding: .3rem .7rem; }
 .review-card.discarded { opacity: .45; }
+#lrcat { margin-bottom: 1rem; }
+.lr-title { color: #9aa0aa; font-size: .85rem; margin-bottom: .4rem; }
+#lr-sources { list-style: none; border: 1px solid #2a2e37; border-radius: 8px; }
+#lr-sources li { padding: .55rem .8rem; border-bottom: 1px solid #2a2e37; cursor: pointer;
+                 display: flex; justify-content: space-between; }
+#lr-sources li:last-child { border-bottom: none; }
+#lr-sources li:hover { background: #22252c; }
