@@ -70,7 +70,15 @@ async function loadLrcat() {
 
 async function openLrGallery(cat, type, id, subtitle) {
   const data = await api(`/api/lrcat/photos?cat=${encodeURIComponent(cat)}&type=${type}&id=${id}`);
+  state.reloadGallery = () => openLrGallery(cat, type, id, subtitle);
   renderGallery(data.photos.filter((p) => !p.missing), subtitle);
+}
+
+function updateToolbar() {
+  const n = state.selected.size;
+  $("process").disabled = n === 0;
+  $("process").textContent = n ? `Procesar ${n} foto(s)` : "Procesar seleccionadas";
+  $("remove-xmp").disabled = n === 0;
 }
 
 // --- Pantalla 2: galería ---
@@ -89,22 +97,34 @@ function renderGallery(photos, subtitle) {
       div.classList.toggle("selected");
       div.classList.contains("selected") ? state.selected.add(p.path)
                                          : state.selected.delete(p.path);
-      $("process").disabled = state.selected.size === 0;
-      $("process").textContent = `Procesar ${state.selected.size} foto(s)`;
+      updateToolbar();
     };
     grid.appendChild(div);
   }
   $("subtitle").textContent = subtitle;
-  $("process").disabled = true;
-  $("process").textContent = "Procesar seleccionadas";
+  updateToolbar();
   show("gallery");
 }
 
 async function openGallery(dir) {
   state.dir = dir;
   const data = await api(`/api/photos?dir=${encodeURIComponent(dir)}`);
+  state.reloadGallery = () => openGallery(dir);
   renderGallery(data.photos, dir);
 }
+
+$("remove-xmp").onclick = async () => {
+  const n = state.selected.size;
+  if (!n) return;
+  if (!confirm(`¿Quitar el XMP de ${n} foto(s)? Sus ediciones se descartan (los RAW no se tocan).`)) return;
+  const { deleted } = await api("/api/xmp/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ files: [...state.selected] }),
+  });
+  alert(`${deleted} XMP eliminados.`);
+  if (state.reloadGallery) state.reloadGallery();
+};
 
 $("back").onclick = () => loadDirs(state.dir ? state.dir.split("/").slice(0, -1).join("/") : "");
 $("select-all").onclick = () => {
@@ -112,8 +132,7 @@ $("select-all").onclick = () => {
     el.classList.add("selected");
     state.selected.add(el.dataset.path);
   });
-  $("process").disabled = state.selected.size === 0;
-  $("process").textContent = `Procesar ${state.selected.size} foto(s)`;
+  updateToolbar();
 };
 
 // --- Opciones de sesión: sesgos e indicaciones para la IA ---

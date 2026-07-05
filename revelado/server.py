@@ -33,6 +33,10 @@ def _default_client_factory():
         return None
 
 
+class XmpDeleteRequest(BaseModel):
+    files: list[str]
+
+
 class ProcessRequest(BaseModel):
     files: list[str]
     overwrite: bool = False
@@ -187,6 +191,11 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
     @app.delete("/api/xmp")
     def remove_xmp(path: str):
         return {"deleted": delete_sidecar(Path(path))}
+
+    @app.post("/api/xmp/delete")
+    def remove_xmps(req: XmpDeleteRequest):
+        """Borra los sidecars XMP en lote (los RAW nunca se tocan)."""
+        return {"deleted": sum(1 for f in req.files if delete_sidecar(Path(f)))}
 
     return app
 

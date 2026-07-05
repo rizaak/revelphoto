@@ -116,3 +116,15 @@ def test_preview_bad_crop_param(tmp_path):
          patch("revelado.server.decode_upright", return_value=img):
         r = _client().get("/api/preview", params={"path": str(raw), "crop": "no-valido"})
     assert r.status_code == 400
+
+
+def test_bulk_xmp_delete(tmp_path):
+    for i in (1, 2, 3):
+        (tmp_path / f"IMG_{i}.CR3").write_bytes(b"x")
+    (tmp_path / "IMG_1.xmp").write_text("x")
+    (tmp_path / "IMG_2.xmp").write_text("x")
+    r = _client().post("/api/xmp/delete", json={
+        "files": [str(tmp_path / f"IMG_{i}.CR3") for i in (1, 2, 3)]})
+    assert r.json()["deleted"] == 2  # la 3 no tenía XMP
+    assert not (tmp_path / "IMG_1.xmp").exists()
+    assert (tmp_path / "IMG_1.CR3").exists()  # el RAW intacto

@@ -66,3 +66,5 @@ button:disabled { opacity: .4; cursor: default; }
                 background: #22252c; }
 #chips button:hover { background: #2f3947; }
 .chip-clear { color: #e06c75 !important; border-color: #5a3a3f !important; }
+button.danger { color: #e06c75; border-color: #5a3a3f; }
+button.danger:not(:disabled):hover { background: #3a2a2e; }
