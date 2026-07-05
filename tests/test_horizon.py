@@ -30,3 +30,20 @@ def test_no_lines_returns_zero():
 
 def test_clamped_to_seven_degrees():
     assert abs(estimate_rotation(_line_image(6.5))) <= 7.0
+
+
+def test_conflicting_lines_return_zero():
+    """Diagonales de escena en desacuerdo => no hay horizonte fiable."""
+    img = np.full((400, 400, 3), 40, dtype=np.uint8)
+    t = np.tan(np.radians(3.0))
+    cv2.line(img, (0, int(150 + 200 * t)), (400, int(150 - 200 * t)), (220, 220, 220), 3)
+    cv2.line(img, (0, int(280 - 200 * t)), (400, int(280 + 200 * t)), (220, 220, 220), 3)
+    assert estimate_rotation(img) == 0.0
+
+
+def test_short_line_is_not_enough_evidence():
+    """Una línea corta (menos del 50% del ancho) no justifica enderezar."""
+    img = np.full((400, 400, 3), 40, dtype=np.uint8)
+    t = np.tan(np.radians(3.0))
+    cv2.line(img, (130, int(200 + 70 * t)), (270, int(200 - 70 * t)), (220, 220, 220), 3)
+    assert estimate_rotation(img) == 0.0

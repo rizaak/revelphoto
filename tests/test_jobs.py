@@ -88,4 +88,6 @@ async def test_photo_event_includes_adjust():
     events = await asyncio.wait_for(_collect(manager, job_id), timeout=5)
     photo = next(e for e in events if e["type"] == "photo")
     assert photo["adjust"] == {"exposure": 0.4, "angle": -1.5,
-                               "crop": [0.1, 0.05, 0.95, 0.9], "masks": 1}
+                               "crop": [0.1, 0.05, 0.95, 0.9], "masks": 1,
+                               "temp_shift": 0, "tint": 5, "contrast": 10,
+                               "highlights": -20, "shadows": 25}

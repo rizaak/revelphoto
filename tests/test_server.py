@@ -89,3 +89,29 @@ def test_delete_xmp(tmp_path):
 def test_index_served():
     r = _client().get("/")
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+
+
+def test_preview_returns_simulated_jpeg(tmp_path):
+    raw = tmp_path / "IMG_1.CR3"
+    raw.write_bytes(b"x")
+    img = np.full((100, 150, 3), 90, dtype=np.uint8)
+    with patch("revelado.server.read_exif", return_value=ExifData(100, 1, 0, 0)), \
+         patch("revelado.server.extract_preview_jpeg", return_value=b"\xff\xd8x"), \
+         patch("revelado.server.decode_upright", return_value=img):
+        r = _client().get("/api/preview", params={
+            "path": str(raw), "exposure": 0.5, "temp_shift": 400,
+            "crop": "0.1,0.1,0.9,0.9"})
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/jpeg"
+    assert r.content.startswith(b"\xff\xd8")
+
+
+def test_preview_bad_crop_param(tmp_path):
+    raw = tmp_path / "IMG_1.CR3"
+    raw.write_bytes(b"x")
+    img = np.full((50, 50, 3), 90, dtype=np.uint8)
+    with patch("revelado.server.read_exif", return_value=ExifData(100, 1, 0, 0)), \
+         patch("revelado.server.extract_preview_jpeg", return_value=b"\xff\xd8x"), \
+         patch("revelado.server.decode_upright", return_value=img):
+        r = _client().get("/api/preview", params={"path": str(raw), "crop": "no-valido"})
+    assert r.status_code == 400

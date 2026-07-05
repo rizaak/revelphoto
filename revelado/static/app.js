@@ -129,16 +129,18 @@ $("process").onclick = async () => {
 $("restart").onclick = () => loadDirs(state.dir ? state.dir.split("/").slice(0, -1).join("/") : "");
 
 // --- Pantalla 4: revisión antes/después ---
-function adjustedStyle(adjust) {
-  if (!adjust) return "";
-  const brightness = Math.pow(2, adjust.exposure || 0).toFixed(2);
-  const rotate = -(adjust.angle || 0);
-  let scale = 1;
-  if (adjust.crop) {
-    const [l, t, r, b] = adjust.crop;
-    scale = 1 / Math.max(0.3, Math.min(r - l, b - t));
-  }
-  return `filter: brightness(${brightness}); transform: rotate(${rotate}deg) scale(${scale});`;
+function previewURL(ev) {
+  // Simulación en el servidor con los mismos ajustes escritos al XMP
+  const a = ev.adjust || {};
+  const q = new URLSearchParams({
+    path: ev.path,
+    exposure: a.exposure || 0, contrast: a.contrast || 0,
+    highlights: a.highlights || 0, shadows: a.shadows || 0,
+    temp_shift: a.temp_shift || 0, tint: a.tint || 0,
+    angle: a.angle || 0,
+  });
+  if (a.crop) q.set("crop", a.crop.join(","));
+  return `/api/preview?${q.toString()}`;
 }
 
 function renderReview() {
@@ -152,7 +154,7 @@ function renderReview() {
     card.innerHTML = `
       <div class="pair">
         <div><div class="frame"><img src="${thumb}"></div><div class="caption">Antes</div></div>
-        <div><div class="frame"><img src="${thumb}" style="${adjustedStyle(ev.adjust)}"></div>
+        <div><div class="frame"><img src="${previewURL(ev)}"></div>
              <div class="caption">Después${ev.adjust && ev.adjust.masks ? ` · ${ev.adjust.masks} máscara(s)` : ""}</div></div>
       </div>
       <div class="caption">${name}</div>

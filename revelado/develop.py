@@ -40,6 +40,7 @@ class DevelopSettings:
     crop_angle: float
     masks: list[RadialMask] = field(default_factory=list)
     ai_used: bool = False
+    temp_shift: int = 0  # desviación aplicada respecto al WB de cámara (para la simulación)
 
 
 def face_mask_for(face: Face) -> RadialMask | None:
@@ -82,6 +83,7 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
         crop = ai.crop or (0.0, 0.0, 1.0, 1.0)
         temperature, tint = _wb_from_shift(as_shot_temp, ai.temp_shift, ai.tint_shift)
         return DevelopSettings(
+            temp_shift=ai.temp_shift if temperature is not None else 0,
             temperature=temperature, tint=tint,
             exposure=ai.exposure, contrast=ai.contrast,
             highlights=ai.highlights, shadows=ai.shadows,

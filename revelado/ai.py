@@ -60,8 +60,11 @@ _SYSTEM = (
     "controladas.\n"
     "Encuadre: recorta solo si mejora claramente la composición (regla de tercios, "
     "distracciones en bordes) y nunca cortes cabezas; crop en coordenadas normalizadas "
-    "0-1 de la imagen completa, o null si el encuadre ya es bueno; angle es el ajuste "
-    "fino de enderezado en grados (parte de la estimación local dada)."
+    "0-1 de la imagen completa, o null si el encuadre ya es bueno.\n"
+    "Enderezado (angle, en grados): usa un valor distinto de 0 SOLO si ves en la imagen "
+    "una referencia claramente inclinada (horizonte, línea de mar, marco de puerta, "
+    "columnas, encimera). La estimación local dada es orientativa y poco fiable en "
+    "retratos; una inclinación leve suele ser intencional. En caso de duda, devuelve 0."
 )
 
 

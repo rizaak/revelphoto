@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 
 import anthropic
+import cv2
+import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +16,7 @@ from revelado.exif import extract_preview_jpeg, read_exif
 from revelado.imageio import decode_upright, encode_jpeg
 from revelado.jobs import JobManager
 from revelado.pipeline import process_photo
+from revelado.simulate import simulate
 from revelado.xmp import delete_sidecar, sidecar_path
 
 _STATIC = Path(__file__).parent / "static"
@@ -29,6 +32,25 @@ def _default_client_factory():
 class ProcessRequest(BaseModel):
     files: list[str]
     overwrite: bool = False
+
+
+def _thumb_bytes(raw: Path) -> bytes:
+    """Miniatura JPEG vertical-correcta, cacheada por ruta+mtime."""
+    if not raw.exists():
+        raise HTTPException(404, "Archivo no encontrado")
+    cache_dir = SETTINGS.cache_dir / "thumbs"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha1(f"{raw}:{raw.stat().st_mtime}".encode()).hexdigest()
+    cached = cache_dir / f"{key}.jpg"
+    if not cached.exists():
+        try:
+            exif = read_exif(raw)
+            jpeg = extract_preview_jpeg(raw)
+            img = decode_upright(jpeg, exif.orientation, SETTINGS.thumb_long_edge)
+            cached.write_bytes(encode_jpeg(img, quality=80))
+        except Exception as exc:
+            raise HTTPException(404, f"Sin miniatura: {exc}")
+    return cached.read_bytes()
 
 
 def create_app(job_manager: JobManager | None = None, client_factory=None) -> FastAPI:
@@ -69,22 +91,27 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
 
     @app.get("/api/thumb")
     def thumb(path: str):
-        raw = Path(path)
-        if not raw.exists():
-            raise HTTPException(404, "Archivo no encontrado")
-        cache_dir = SETTINGS.cache_dir / "thumbs"
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        key = hashlib.sha1(f"{raw}:{raw.stat().st_mtime}".encode()).hexdigest()
-        cached = cache_dir / f"{key}.jpg"
-        if not cached.exists():
+        return Response(_thumb_bytes(Path(path)), media_type="image/jpeg")
+
+    @app.get("/api/preview")
+    def preview(path: str, exposure: float = 0.0, contrast: int = 0,
+                highlights: int = 0, shadows: int = 0, temp_shift: int = 0,
+                tint: int = 0, angle: float = 0.0, crop: str = ""):
+        """Miniatura con los ajustes simulados (aproximación del resultado en LR)."""
+        img = cv2.imdecode(np.frombuffer(_thumb_bytes(Path(path)), np.uint8),
+                           cv2.IMREAD_COLOR)
+        crop_rect = None
+        if crop:
             try:
-                exif = read_exif(raw)
-                jpeg = extract_preview_jpeg(raw)
-                img = decode_upright(jpeg, exif.orientation, SETTINGS.thumb_long_edge)
-                cached.write_bytes(encode_jpeg(img, quality=80))
-            except Exception as exc:
-                raise HTTPException(404, f"Sin miniatura: {exc}")
-        return Response(cached.read_bytes(), media_type="image/jpeg")
+                left, top, right, bottom = (float(v) for v in crop.split(","))
+                crop_rect = (left, top, right, bottom)
+            except ValueError:
+                raise HTTPException(400, "Parámetro crop inválido")
+        out = simulate(img, exposure=exposure, contrast=contrast,
+                       highlights=highlights, shadows=shadows,
+                       temp_shift=temp_shift, tint=tint, angle=angle,
+                       crop=crop_rect)
+        return Response(encode_jpeg(out, quality=80), media_type="image/jpeg")
 
     @app.post("/api/process")
     async def process(req: ProcessRequest):

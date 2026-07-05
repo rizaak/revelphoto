@@ -61,6 +61,9 @@ class JobManager:
                         "crop": [s.crop_left, s.crop_top, s.crop_right, s.crop_bottom]
                                 if s.has_crop else None,
                         "masks": len(s.masks),
+                        "temp_shift": s.temp_shift, "tint": s.tint,
+                        "contrast": s.contrast, "highlights": s.highlights,
+                        "shadows": s.shadows,
                     }
             except Exception as exc:
                 # Nunca dejar el lote sin evento: convertir en error
