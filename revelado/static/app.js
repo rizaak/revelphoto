@@ -144,11 +144,11 @@ function initSessionOpts() {
     b.textContent = "+ " + label;
     b.title = text;  // el brief completo se ve al pasar el ratón
     b.onclick = () => {
-      const area = $("session-prompt");
-      area.value = (area.value.trim() ? area.value.trim() + "\n" : "") + text;
+      $("session-prompt").value = text;  // reemplaza lo anterior
     };
     chips.appendChild(b);
   }
+  $("clear-prompt").onclick = () => { $("session-prompt").value = ""; };
   $("bias-expo").oninput = () => {
     const v = parseFloat($("bias-expo").value);
     $("bias-expo-val").textContent = `${v > 0 ? "+" : ""}${v.toFixed(1)} EV`;

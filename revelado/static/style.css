@@ -65,3 +65,4 @@ button:disabled { opacity: .4; cursor: default; }
 #chips button { font-size: .75rem; padding: .25rem .6rem; border-radius: 999px;
                 background: #22252c; }
 #chips button:hover { background: #2f3947; }
+.chip-clear { color: #e06c75 !important; border-color: #5a3a3f !important; }
