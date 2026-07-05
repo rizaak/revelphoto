@@ -70,3 +70,14 @@ def test_single_photo_and_failed_analyses_untouched():
     skipped = PhotoAnalysis(Path("/x/skip.CR3"), skipped=True)
     harmonize([solo, failed, skipped])
     assert solo.ai.exposure == 0.3 and failed.ai is None
+
+
+def test_auto_wb_unified_to_same_absolute_kelvin():
+    """Con WB automático cada foto trae una base distinta: el resultado final
+    debe ser el MISMO Kelvin absoluto para toda la escena."""
+    photos = [_photo("a", 100, wb=4100, temp_shift=0),
+              _photo("b", 120, wb=4300, temp_shift=0),
+              _photo("c", 140, wb=4200, temp_shift=0)]
+    harmonize(photos)
+    finals = {p.exif.color_temp + p.ai.temp_shift for p in photos}
+    assert len(finals) == 1

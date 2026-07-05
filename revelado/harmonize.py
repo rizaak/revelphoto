@@ -42,7 +42,11 @@ def harmonize(analyses: list[PhotoAnalysis]) -> None:
     for group in _groups(analyses):
         if len(group) < 2:
             continue
-        temp_shift = int(median(a.ai.temp_shift for a in group))
+        # Color: Kelvin ABSOLUTO único por escena (con WB automático cada foto
+        # trae una base distinta; igualar solo el desplazamiento no basta)
+        median_shift = int(median(a.ai.temp_shift for a in group))
+        bases = [a.exif.color_temp for a in group if a.exif.color_temp]
+        group_kelvin = int(median(bases)) + median_shift if bases else None
         tint_shift = int(median(a.ai.tint_shift for a in group))
         contrast = int(median(a.ai.contrast for a in group))
         highlights = int(median(a.ai.highlights for a in group))
@@ -51,6 +55,10 @@ def harmonize(analyses: list[PhotoAnalysis]) -> None:
         target = median(a.metrics.mean_luma * 2 ** a.ai.exposure for a in group)
         limit = SETTINGS.max_global_exposure
         for a in group:
+            if group_kelvin is not None and a.exif.color_temp:
+                temp_shift = group_kelvin - a.exif.color_temp
+            else:
+                temp_shift = median_shift
             exposure = math.log2(max(target, 0.02) / max(a.metrics.mean_luma, 0.02))
             a.ai = replace(
                 a.ai,

@@ -31,12 +31,13 @@ def simulate(img_bgr: np.ndarray, *, exposure: float = 0.0, contrast: int = 0,
         img = img * (2.0 ** exposure)
 
     # Balance: temp_shift > 0 = más cálido (sube rojo, baja azul); tint > 0 = más magenta
+    # Factores calibrados a la baja: LR aplica el Kelvin sobre el RAW y es más sutil
     if temp_shift:
-        f = temp_shift / 4000.0
+        f = temp_shift / 6000.0
         img[..., 2] *= 1 + f
         img[..., 0] *= 1 - f
     if tint:
-        img[..., 1] *= 1 - tint / 300.0
+        img[..., 1] *= 1 - tint / 450.0
 
     # Contraste alrededor del gris medio
     if contrast:
