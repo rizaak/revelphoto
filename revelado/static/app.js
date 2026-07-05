@@ -118,25 +118,34 @@ $("select-all").onclick = () => {
 
 // --- Opciones de sesión: sesgos e indicaciones para la IA ---
 const CHIP_SUGGESTIONS = [
-  "Luminosas y aireadas",
-  "Cálidas y acogedoras",
-  "Frías y limpias",
-  "Contraste suave, acabado mate",
-  "Colores vivos y saturados",
-  "Piel natural y uniforme",
-  "Respeta el ambiente de la luz original",
-  "Estilo editorial elegante",
+  { label: "Luminosas y aireadas",
+    text: "Look luminoso y aireado (bright & airy): sube ligeramente la exposición general, abre las sombras con suavidad y controla las altas luces sin quemar la piel. Contraste bajo, color limpio con un matiz cálido muy sutil. Evita negros profundos y saturaciones fuertes; la piel debe verse fresca y clara." },
+  { label: "Cálidas y acogedoras",
+    text: "Ambiente cálido y acogedor: desplaza el balance hacia cálido de forma notable pero creíble, sombras ligeramente levantadas y contraste medio. Favorece tonos tierra y dorados; la piel con un brillo dorado natural sin ponerse naranja. Conserva la sensación de la luz real de la escena." },
+  { label: "Frías y limpias",
+    text: "Estética fría y limpia: balance ligeramente hacia azul, blancos puros sin dominantes, contraste medio-alto con negros definidos y saturación contenida. La piel debe seguir viéndose sana y natural, nunca grisácea. Look moderno y minimalista." },
+  { label: "Mate, contraste suave",
+    text: "Acabado mate de contraste suave: levanta un poco las sombras (negros ligeramente lavados), baja levemente las altas luces y reduce el contraste general. Saturación moderada, sensación de película analógica suave — pero sin que la foto quede plana o sin vida." },
+  { label: "Colores vivos",
+    text: "Colores vivos y presentes: contraste medio-alto, saturación notoria pero sin caer en HDR ni posterizar, altas luces protegidas. Aunque la escena sea vibrante, la piel se mantiene natural y sin sobresaturar. Energía y frescura." },
+  { label: "Piel protagonista",
+    text: "La piel es la prioridad absoluta: decide la exposición para que los rostros queden luminosos y uniformes, con tonos de piel naturales sin dominantes (ni naranja ni magenta) y contraste suave en las caras. Todos los demás ajustes quedan al servicio del retrato." },
+  { label: "Respeta la luz original",
+    text: "Intervención mínima: respeta el carácter, la dirección y el ambiente de la luz original de la escena. Corrige solo defectos técnicos claros (exposición desviada, dominante evidente) sin imponer ningún look. Todos los cambios deben ser sutiles." },
+  { label: "Editorial elegante",
+    text: "Estilo editorial elegante, de revista: contraste refinado con negros ricos, altas luces sedosas, paleta contenida y sofisticada, ligera desaturación de los colores chillones. Resultado pulido, intencional y atemporal." },
 ];
 
 function initSessionOpts() {
   const chips = $("chips");
-  for (const text of CHIP_SUGGESTIONS) {
+  for (const { label, text } of CHIP_SUGGESTIONS) {
     const b = document.createElement("button");
     b.type = "button";
-    b.textContent = "+ " + text;
+    b.textContent = "+ " + label;
+    b.title = text;  // el brief completo se ve al pasar el ratón
     b.onclick = () => {
       const area = $("session-prompt");
-      area.value = (area.value.trim() ? area.value.trim() + ". " : "") + text;
+      area.value = (area.value.trim() ? area.value.trim() + "\n" : "") + text;
     };
     chips.appendChild(b);
   }
