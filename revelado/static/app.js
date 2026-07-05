@@ -75,7 +75,8 @@ $("select-all").onclick = () => {
 // --- Pantalla 3: progreso ---
 $("process").onclick = async () => {
   if (Notification.permission === "default") await Notification.requestPermission();
-  const body = { files: [...state.selected], overwrite: $("overwrite").checked };
+  const body = { files: [...state.selected], overwrite: $("overwrite").checked,
+                 harmonize: $("harmonize").checked };
   const { job_id, local_only } = await api("/api/process", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -91,6 +92,11 @@ $("process").onclick = async () => {
   const source = new EventSource(`/api/jobs/${job_id}/events`);
   source.onmessage = (msg) => {
     const ev = JSON.parse(msg.data);
+    if (ev.type === "progress") {
+      $("bar-fill").style.width = `${(100 * ev.completed) / ev.total}%`;
+      $("progress-text").textContent = `Analizando foto ${ev.completed} de ${ev.total}…`;
+      return;
+    }
     if (ev.type === "photo") {
       state.results.push(ev);
       $("bar-fill").style.width = `${(100 * ev.completed) / ev.total}%`;

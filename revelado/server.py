@@ -15,7 +15,8 @@ from revelado.config import SETTINGS
 from revelado.exif import extract_preview_jpeg, read_exif
 from revelado.imageio import decode_upright, encode_jpeg
 from revelado.jobs import JobManager
-from revelado.pipeline import process_photo
+from revelado.harmonize import harmonize
+from revelado.pipeline import analyze_photo, finalize_photo
 from revelado.simulate import simulate
 from revelado.xmp import delete_sidecar, sidecar_path
 
@@ -32,6 +33,7 @@ def _default_client_factory():
 class ProcessRequest(BaseModel):
     files: list[str]
     overwrite: bool = False
+    harmonize: bool = True  # armonía de sesión: mismo look por escena
 
 
 def _thumb_bytes(raw: Path) -> bytes:
@@ -120,8 +122,10 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
         if missing:
             raise HTTPException(400, f"Archivos inexistentes: {missing[0]}")
         client = make_client()
-        processor = lambda p, ow: process_photo(p, ow, client)
-        job_id = manager.create_job(paths, req.overwrite, processor)
+        analyzer = lambda p, ow: analyze_photo(p, ow, client)
+        harmonizer = harmonize if req.harmonize and len(paths) > 1 else None
+        job_id = manager.create_job(paths, req.overwrite, analyzer,
+                                    finalize_photo, harmonizer)
         return {"job_id": job_id, "local_only": client is None}
 
     @app.get("/api/jobs/{job_id}")

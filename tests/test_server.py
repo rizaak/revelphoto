@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from revelado.exif import ExifData
 from revelado.jobs import JobManager
-from revelado.pipeline import PhotoResult
+from revelado.pipeline import PhotoAnalysis, PhotoResult
 from revelado.server import create_app
 
 
@@ -56,7 +56,8 @@ def test_process_and_stream_events(tmp_path):
     raw = tmp_path / "IMG_1.CR3"
     raw.write_bytes(b"x")
     fake = PhotoResult(str(raw), "done")
-    with patch("revelado.server.process_photo", return_value=fake):
+    with patch("revelado.server.analyze_photo", return_value=PhotoAnalysis(raw)), \
+         patch("revelado.server.finalize_photo", return_value=fake):
         with _client() as client:  # portal único: la tarea de fondo sobrevive entre peticiones
             r = client.post("/api/process", json={"files": [str(raw)], "overwrite": False})
             assert r.status_code == 200

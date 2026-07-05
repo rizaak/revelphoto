@@ -36,6 +36,8 @@ class Settings:
     min_temp_shift_apply: int = 100  # por debajo, se respeta el "As Shot" tal cual
     min_tint_shift_apply: int = 5
     style_path: Path = _ROOT / "estilo.txt"
+    harmony_time_gap: int = 480     # segundos entre tomas para considerar nueva escena
+    harmony_wb_delta: int = 400     # cambio de WB de cámara (K) que marca nueva escena
     worker_concurrency: int = 4
     api_max_tokens: int = 1024
     raw_extensions: tuple[str, ...] = (".cr2", ".cr3")

@@ -5,7 +5,7 @@ from typing import Callable
 
 from revelado.config import SETTINGS
 from revelado.notify import notify_macos
-from revelado.pipeline import PhotoResult
+from revelado.pipeline import PhotoAnalysis, PhotoResult
 
 
 class JobManager:
@@ -14,7 +14,9 @@ class JobManager:
         self._on_finish = on_finish
 
     def create_job(self, paths: list[Path], overwrite: bool,
-                   processor: Callable[[Path, bool], PhotoResult]) -> str:
+                   analyzer: Callable[[Path, bool], PhotoAnalysis],
+                   finalizer: Callable[[PhotoAnalysis, bool], PhotoResult],
+                   harmonizer: Callable[[list[PhotoAnalysis]], None] | None = None) -> str:
         job_id = uuid.uuid4().hex
         job = {
             "id": job_id, "total": len(paths), "completed": 0,
@@ -24,7 +26,8 @@ class JobManager:
         self._jobs[job_id] = job
         # Requiere un event loop en ejecución: create_job debe llamarse desde
         # código async (la ruta /api/process es `async def` por esto).
-        asyncio.create_task(self._run(job, paths, overwrite, processor))
+        asyncio.create_task(self._run(job, paths, overwrite, analyzer,
+                                      finalizer, harmonizer))
         return job_id
 
     def get(self, job_id: str) -> dict | None:
@@ -41,16 +44,42 @@ class JobManager:
             job["events"].append(event)
             job["condition"].notify_all()
 
-    async def _run(self, job, paths, overwrite, processor) -> None:
+    async def _run(self, job, paths, overwrite, analyzer, finalizer,
+                   harmonizer) -> None:
         sem = asyncio.Semaphore(SETTINGS.worker_concurrency)
+        analyses: dict[Path, PhotoAnalysis] = {}
+        analyzed = 0
 
-        async def one(path: Path):
+        # Fase 1: análisis concurrente (la parte lenta: preview + IA)
+        async def analyze_one(path: Path):
+            nonlocal analyzed
             async with sem:
                 try:
-                    result = await asyncio.to_thread(processor, path, overwrite)
+                    analysis = await asyncio.to_thread(analyzer, path, overwrite)
                 except Exception as exc:
-                    result = PhotoResult(str(path), "error",
-                                         f"{type(exc).__name__}: {exc}")
+                    analysis = PhotoAnalysis(path, error=f"{type(exc).__name__}: {exc}")
+            analyses[path] = analysis
+            analyzed += 1
+            await self._emit(job, {"type": "progress", "completed": analyzed,
+                                   "total": job["total"]})
+
+        await asyncio.gather(*(analyze_one(p) for p in paths))
+
+        # Fase 2: armonía de sesión (unifica el look por escena)
+        ordered = [analyses[p] for p in paths]
+        if harmonizer is not None:
+            try:
+                await asyncio.to_thread(harmonizer, ordered)
+            except Exception:
+                pass  # sin armonía es mejor que sin lote
+
+        # Fase 3: escribir los XMP y emitir los resultados
+        for analysis in ordered:
+            try:
+                result = await asyncio.to_thread(finalizer, analysis, overwrite)
+            except Exception as exc:
+                result = PhotoResult(str(analysis.path), "error",
+                                     f"{type(exc).__name__}: {exc}")
             try:
                 entry = {"path": result.path, "status": result.status,
                          "message": result.message}
@@ -67,7 +96,7 @@ class JobManager:
                     }
             except Exception as exc:
                 # Nunca dejar el lote sin evento: convertir en error
-                entry = {"path": str(path), "status": "error",
+                entry = {"path": str(analysis.path), "status": "error",
                          "message": f"{type(exc).__name__}: {exc}"}
             job["results"].append(entry)
             job["completed"] += 1
@@ -75,7 +104,6 @@ class JobManager:
                                    "completed": job["completed"],
                                    "total": job["total"]})
 
-        await asyncio.gather(*(one(p) for p in paths))
         ok = sum(1 for r in job["results"] if r["status"].startswith("done"))
         errors = sum(1 for r in job["results"] if r["status"] == "error")
         skipped = sum(1 for r in job["results"] if r["status"] == "skipped_existing")

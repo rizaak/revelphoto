@@ -1,18 +1,20 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
-from revelado.ai import AIUnavailable, decide
-from revelado.analysis.faces import detect_faces
+from revelado.ai import AIDecision, AIUnavailable, decide
+from revelado.analysis.faces import Face, detect_faces
 from revelado.analysis.horizon import estimate_rotation
-from revelado.analysis.metrics import compute_metrics
+from revelado.analysis.metrics import GlobalMetrics, compute_metrics
 from revelado.config import SETTINGS
 from revelado.develop import DevelopSettings, compute_settings
-from revelado.exif import extract_preview_jpeg, read_exif
+from revelado.exif import ExifData, extract_preview_jpeg, read_exif
 from revelado.imageio import decode_upright, encode_jpeg
 from revelado.xmp import SidecarExists, sidecar_path, write_sidecar
 
 log = logging.getLogger(__name__)
+
+_SKIP_MSG = "Ya existe un XMP; no se sobrescribe sin confirmación"
 
 
 @dataclass
@@ -23,11 +25,24 @@ class PhotoResult:
     settings: DevelopSettings | None = None
 
 
-def process_photo(raw_path: Path, overwrite: bool, client) -> PhotoResult:
+@dataclass
+class PhotoAnalysis:
+    """Resultado de la fase de análisis; la armonización puede ajustar `ai`."""
+    path: Path
+    skipped: bool = False
+    error: str = ""
+    exif: ExifData | None = None
+    metrics: GlobalMetrics | None = None
+    faces: list[Face] = field(default_factory=list)
+    rotation: float = 0.0
+    ai: AIDecision | None = None
+
+
+def analyze_photo(raw_path: Path, overwrite: bool, client) -> PhotoAnalysis:
+    """Fase 1: análisis local + decisión de la IA (sin escribir nada)."""
     try:
         if sidecar_path(raw_path).exists() and not overwrite:
-            return PhotoResult(str(raw_path), "skipped_existing",
-                               "Ya existe un XMP; no se sobrescribe sin confirmación")
+            return PhotoAnalysis(raw_path, skipped=True)
 
         exif = read_exif(raw_path)
         jpeg = extract_preview_jpeg(raw_path)
@@ -37,23 +52,42 @@ def process_photo(raw_path: Path, overwrite: bool, client) -> PhotoResult:
         rotation = estimate_rotation(img)
 
         ai = None
-        status = "done_local_only"
         if client is not None:
             try:
                 ai = decide(client, encode_jpeg(img), metrics, faces, rotation,
                             as_shot_temp=exif.color_temp)
-                status = "done"
             except AIUnavailable as exc:
                 log.warning("API no disponible para %s: %s", raw_path.name, exc)
 
-        settings = compute_settings(metrics, faces, rotation, ai,
-                                    as_shot_temp=exif.color_temp)
-        write_sidecar(raw_path, settings, overwrite=overwrite)
-        return PhotoResult(str(raw_path), status, settings=settings)
-
-    except SidecarExists:
-        return PhotoResult(str(raw_path), "skipped_existing",
-                           "Ya existe un XMP; no se sobrescribe sin confirmación")
+        return PhotoAnalysis(raw_path, exif=exif, metrics=metrics, faces=faces,
+                             rotation=rotation, ai=ai)
     except Exception as exc:
-        log.exception("Error procesando %s", raw_path)
+        log.exception("Error analizando %s", raw_path)
+        return PhotoAnalysis(raw_path, error=f"{type(exc).__name__}: {exc}")
+
+
+def finalize_photo(analysis: PhotoAnalysis, overwrite: bool) -> PhotoResult:
+    """Fase 2: calcular ajustes finales y escribir el XMP."""
+    raw_path = analysis.path
+    if analysis.skipped:
+        return PhotoResult(str(raw_path), "skipped_existing", _SKIP_MSG)
+    if analysis.error:
+        return PhotoResult(str(raw_path), "error", analysis.error)
+    try:
+        as_shot = analysis.exif.color_temp if analysis.exif else None
+        settings = compute_settings(analysis.metrics, analysis.faces,
+                                    analysis.rotation, analysis.ai,
+                                    as_shot_temp=as_shot)
+        write_sidecar(raw_path, settings, overwrite=overwrite)
+        status = "done" if analysis.ai is not None else "done_local_only"
+        return PhotoResult(str(raw_path), status, settings=settings)
+    except SidecarExists:
+        return PhotoResult(str(raw_path), "skipped_existing", _SKIP_MSG)
+    except Exception as exc:
+        log.exception("Error escribiendo ajustes de %s", raw_path)
         return PhotoResult(str(raw_path), "error", f"{type(exc).__name__}: {exc}")
+
+
+def process_photo(raw_path: Path, overwrite: bool, client) -> PhotoResult:
+    """Foto suelta (reprocesado individual): analizar y escribir sin armonizar."""
+    return finalize_photo(analyze_photo(raw_path, overwrite, client), overwrite)
