@@ -10,7 +10,7 @@ from revelado.pipeline import process_photo
 EXIF = ExifData(iso=400, orientation=1, width=6000, height=4000)
 IMG = np.full((200, 300, 3), 128, dtype=np.uint8)
 AI = AIDecision(crop=None, angle=0.5, exposure=0.2, contrast=5, highlights=-10,
-                shadows=15, temperature=5400, tint=4)
+                shadows=15, temp_shift=0, tint_shift=0)
 
 
 def _patches(**overrides):

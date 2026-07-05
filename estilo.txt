@@ -1,0 +1,7 @@
+# Preferencias de estilo del fotógrafo.
+# La IA lee este archivo en CADA foto y sigue lo que escribas aquí.
+# Escribe con tus palabras; una idea por línea. Las líneas con # se ignoran.
+
+Pieles naturales y luminosas; que las personas nunca queden apagadas.
+Colores fieles a la escena; corrige dominantes pero no inventes un look.
+Contraste suave y agradable, no dramático.

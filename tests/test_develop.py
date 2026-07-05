@@ -9,7 +9,7 @@ from revelado.develop import compute_settings, face_mask_for
 METRICS = GlobalMetrics(mean_luma=0.42, clip_shadows=0.0, clip_highlights=0.0,
                         wb_temp=5400, wb_tint=3, sharpness=100.0, iso=3200)
 AI = AIDecision(crop=(0.1, 0.05, 0.95, 0.9), angle=-1.5, exposure=0.3,
-                contrast=10, highlights=-20, shadows=25, temperature=5300, tint=6)
+                contrast=10, highlights=-20, shadows=25, temp_shift=0, tint_shift=0)
 
 
 def test_dark_face_gets_mask_with_capped_ev():
@@ -36,22 +36,34 @@ def test_compute_with_ai_uses_ai_values():
     assert s.ai_used and s.has_crop
     assert (s.crop_left, s.crop_top, s.crop_right, s.crop_bottom) == AI.crop
     assert s.crop_angle == AI.angle and s.exposure == AI.exposure
-    assert s.temperature is None  # sin dominante => As Shot
+    assert s.temperature is None  # shift 0 => As Shot
     assert s.luminance_smoothing > 0  # ISO 3200
     assert len(s.masks) == 1
 
 
-def test_compute_with_ai_strong_cast_uses_custom_wb():
-    ai_calido = replace(AI, temperature=4200)
-    s = compute_settings(METRICS, [], -1.0, ai_calido)
-    assert s.temperature == 4200
+def test_compute_with_ai_shift_anchored_to_camera_wb():
+    ai_calido = replace(AI, temp_shift=400, tint_shift=8)
+    s = compute_settings(METRICS, [], -1.0, ai_calido, as_shot_temp=5200)
+    assert s.temperature == 5600 and s.tint == 8  # 5200 + 400, anclado a camara
+
+
+def test_compute_with_ai_shift_without_camera_wb_stays_as_shot():
+    ai_calido = replace(AI, temp_shift=400)
+    s = compute_settings(METRICS, [], -1.0, ai_calido, as_shot_temp=None)
+    assert s.temperature is None  # sin ancla no se toca el color
+
+
+def test_compute_with_ai_tiny_shift_stays_as_shot():
+    ai_leve = replace(AI, temp_shift=50, tint_shift=2)
+    s = compute_settings(METRICS, [], -1.0, ai_leve, as_shot_temp=5200)
+    assert s.temperature is None
 
 
 def test_compute_local_only():
     s = compute_settings(METRICS, [], rotation=-2.0, ai=None)
     assert not s.ai_used and s.has_crop  # rotación != 0 => enderezado activo
     assert s.crop_angle == -2.0            # usa la estimación local
-    assert s.temperature is None  # sin dominante => As Shot
+    assert s.temperature is None  # modo local nunca toca el color
     assert abs(s.exposure) <= 1.0
     # exposición local: llevar luma media hacia ~0.45 de forma conservadora
     assert s.exposure > 0                  # 0.42 < 0.45 => sube un poco

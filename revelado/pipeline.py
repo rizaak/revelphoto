@@ -40,12 +40,14 @@ def process_photo(raw_path: Path, overwrite: bool, client) -> PhotoResult:
         status = "done_local_only"
         if client is not None:
             try:
-                ai = decide(client, encode_jpeg(img), metrics, faces, rotation)
+                ai = decide(client, encode_jpeg(img), metrics, faces, rotation,
+                            as_shot_temp=exif.color_temp)
                 status = "done"
             except AIUnavailable as exc:
                 log.warning("API no disponible para %s: %s", raw_path.name, exc)
 
-        settings = compute_settings(metrics, faces, rotation, ai)
+        settings = compute_settings(metrics, faces, rotation, ai,
+                                    as_shot_temp=exif.color_temp)
         write_sidecar(raw_path, settings, overwrite=overwrite)
         return PhotoResult(str(raw_path), status, settings=settings)
 

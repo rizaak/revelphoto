@@ -14,6 +14,7 @@ class ExifData:
     orientation: int
     width: int
     height: int
+    color_temp: int | None = None  # WB de cámara en Kelvin ("tal como se capturó")
 
 
 def _run(args: list[str]) -> bytes:
@@ -28,16 +29,18 @@ def _int_tag(tags: dict, key: str, default: int) -> int:
 
 def read_exif(raw_path: Path) -> ExifData:
     out = _run(["exiftool", "-j", "-n", "-ISO", "-Orientation",
-                "-ImageWidth", "-ImageHeight", str(raw_path)])
+                "-ImageWidth", "-ImageHeight", "-ColorTemperature", str(raw_path)])
     try:
         tags = json.loads(out.decode() or "[{}]")[0]
     except (json.JSONDecodeError, IndexError):
         tags = {}
+    color_temp = tags.get("ColorTemperature")
     return ExifData(
         iso=_int_tag(tags, "ISO", 100),
         orientation=_int_tag(tags, "Orientation", 1),
         width=_int_tag(tags, "ImageWidth", 0),
         height=_int_tag(tags, "ImageHeight", 0),
+        color_temp=int(color_temp) if color_temp else None,
     )
 
 

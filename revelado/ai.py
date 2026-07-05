@@ -19,8 +19,8 @@ class AIDecision:
     contrast: int
     highlights: int
     shadows: int
-    temperature: int
-    tint: int
+    temp_shift: int  # desviación en Kelvin respecto al WB de cámara (+ = más cálido)
+    tint_shift: int  # desviación de tinte (+ = más magenta)
 
 
 _CROP_PROPS = {k: {"type": "number"} for k in ("left", "top", "right", "bottom")}
@@ -37,47 +37,65 @@ DECISION_SCHEMA = {
         "contrast": {"type": "integer"},
         "highlights": {"type": "integer"},
         "shadows": {"type": "integer"},
-        "temperature": {"type": "integer"},
-        "tint": {"type": "integer"},
+        "temp_shift": {"type": "integer"},
+        "tint_shift": {"type": "integer"},
     },
     "required": ["crop", "angle", "exposure", "contrast", "highlights",
-                 "shadows", "temperature", "tint"],
+                 "shadows", "temp_shift", "tint_shift"],
     "additionalProperties": False,
 }
 
 _SYSTEM = (
     "Eres un editor fotográfico profesional de retratos. Recibes la vista previa de una "
     "foto RAW y métricas técnicas medidas localmente. Devuelve ajustes de revelado para "
-    "Lightroom en JSON. Reglas: exposición global conservadora (los rostros oscuros se "
-    "corrigen aparte con máscaras locales, no subas la exposición global por ellos); "
-    "recorta solo si mejora claramente la composición (regla de tercios, distracciones "
-    "en bordes) y nunca cortes cabezas; crop en coordenadas normalizadas 0-1 de la imagen "
-    "completa, o null si el encuadre ya es bueno; angle es el ajuste fino de enderezado "
-    "en grados (parte de la estimación local dada); temperature/tint parten de la "
-    "estimación local, corrígelos solo si ves un dominante de color."
+    "Lightroom en JSON.\n"
+    "Color: el balance de blancos de cámara ('tal como se capturó') es tu punto de "
+    "partida y suele ser correcto. Devuelve temp_shift (Kelvin, positivo = más cálido) y "
+    "tint_shift (positivo = más magenta) como DESVIACIÓN respecto a él: 0 y 0 si el color "
+    "de cámara ya funciona; corrige con decisión solo si ves una dominante o si el estilo "
+    "del fotógrafo lo pide.\n"
+    "Luz: exposición global conservadora (los rostros oscuros se corrigen aparte con "
+    "máscaras locales, no subas la exposición global por ellos); usa contrast, highlights "
+    "y shadows para un acabado profesional: piel luminosa y natural, altas luces "
+    "controladas.\n"
+    "Encuadre: recorta solo si mejora claramente la composición (regla de tercios, "
+    "distracciones en bordes) y nunca cortes cabezas; crop en coordenadas normalizadas "
+    "0-1 de la imagen completa, o null si el encuadre ya es bueno; angle es el ajuste "
+    "fino de enderezado en grados (parte de la estimación local dada)."
 )
 
 
+def _style_text() -> str:
+    """Preferencias del fotógrafo desde estilo.txt (líneas de comentario fuera)."""
+    try:
+        lines = SETTINGS.style_path.read_text(encoding="utf-8").splitlines()
+        return "\n".join(l for l in lines if l.strip() and not l.strip().startswith("#")).strip()
+    except OSError:
+        return ""
+
+
 def decide(client, preview_jpeg: bytes, metrics: GlobalMetrics,
-           faces: list[Face], rotation: float) -> AIDecision:
+           faces: list[Face], rotation: float,
+           as_shot_temp: int | None = None) -> AIDecision:
     context = {
         "metricas": {
             "luma_media": round(metrics.mean_luma, 3),
             "recorte_sombras": round(metrics.clip_shadows, 4),
             "recorte_altas_luces": round(metrics.clip_highlights, 4),
-            "wb_temp_estimada": metrics.wb_temp,
-            "wb_tint_estimado": metrics.wb_tint,
             "iso": metrics.iso,
         },
+        "wb_camara_kelvin": as_shot_temp,
         "rotacion_estimada_grados": round(rotation, 2),
         "caras": [{"x": round(f.x, 3), "y": round(f.y, 3), "w": round(f.w, 3),
                    "h": round(f.h, 3), "luma": round(f.luma, 3)} for f in faces],
     }
+    style = _style_text()
+    system = _SYSTEM + (f"\n\nPreferencias del fotógrafo (síguelas):\n{style}" if style else "")
     try:
         response = client.messages.create(
             model=SETTINGS.model,
             max_tokens=SETTINGS.api_max_tokens,
-            system=_SYSTEM,
+            system=system,
             messages=[{"role": "user", "content": [
                 {"type": "image", "source": {
                     "type": "base64", "media_type": "image/jpeg",
@@ -101,8 +119,8 @@ def decide(client, preview_jpeg: bytes, metrics: GlobalMetrics,
             contrast=int(data["contrast"]),
             highlights=int(data["highlights"]),
             shadows=int(data["shadows"]),
-            temperature=int(data["temperature"]),
-            tint=int(data["tint"]),
+            temp_shift=int(data["temp_shift"]),
+            tint_shift=int(data["tint_shift"]),
         ))
     except AIUnavailable:
         raise
@@ -128,6 +146,6 @@ def clamp_decision(d: AIDecision) -> AIDecision:
         contrast=min(max(d.contrast, -100), 100),
         highlights=min(max(d.highlights, -100), 100),
         shadows=min(max(d.shadows, -100), 100),
-        temperature=min(max(d.temperature, 2500), 10000),
-        tint=min(max(d.tint, -100), 100),
+        temp_shift=min(max(d.temp_shift, -SETTINGS.max_temp_shift), SETTINGS.max_temp_shift),
+        tint_shift=min(max(d.tint_shift, -SETTINGS.max_tint_shift), SETTINGS.max_tint_shift),
     )

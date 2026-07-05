@@ -38,3 +38,17 @@ def test_extract_preview_falls_back_then_raises():
     with patch("revelado.exif.subprocess.run", return_value=_completed(b"")):
         with pytest.raises(PreviewError):
             extract_preview_jpeg(Path("/x/a.cr3"))
+
+
+def test_read_exif_color_temperature():
+    payload = json.dumps([{"ISO": 200, "Orientation": 1, "ImageWidth": 6000,
+                           "ImageHeight": 4000, "ColorTemperature": 5200}]).encode()
+    with patch("revelado.exif.subprocess.run", return_value=_completed(payload)):
+        data = read_exif(Path("/x/a.cr3"))
+    assert data.color_temp == 5200
+
+
+def test_read_exif_color_temperature_missing_is_none():
+    payload = json.dumps([{"ISO": 200}]).encode()
+    with patch("revelado.exif.subprocess.run", return_value=_completed(payload)):
+        assert read_exif(Path("/x/a.cr3")).color_temp is None

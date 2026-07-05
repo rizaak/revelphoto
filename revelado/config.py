@@ -31,8 +31,11 @@ class Settings:
     max_face_ev: float = 1.5
     max_global_exposure: float = 1.0
     max_crop_angle: float = 10.0
-    wb_cast_temp_delta: int = 800   # desviación de 5500K que consideramos dominante de color
-    wb_cast_tint: int = 25
+    max_temp_shift: int = 1500      # desviación máxima de WB (Kelvin) respecto al de cámara
+    max_tint_shift: int = 40
+    min_temp_shift_apply: int = 100  # por debajo, se respeta el "As Shot" tal cual
+    min_tint_shift_apply: int = 5
+    style_path: Path = _ROOT / "estilo.txt"
     worker_concurrency: int = 4
     api_max_tokens: int = 1024
     raw_extensions: tuple[str, ...] = (".cr2", ".cr3")
