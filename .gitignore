@@ -5,3 +5,4 @@ samples/
 .pytest_cache/
 .claude/
 .superpowers/
+.env
