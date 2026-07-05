@@ -75,3 +75,11 @@ def test_clamp_rejects_tiny_crop():
     d = AIDecision(crop=(0.4, 0.4, 0.5, 0.5), angle=0, exposure=0, contrast=0,
                    highlights=0, shadows=0, temp_shift=0, tint_shift=0)
     assert clamp_decision(d).crop is None  # recorte < 50% del lado => descartar
+
+
+def test_session_prompt_included_in_system():
+    client = _client_returning(json.dumps(VALID))
+    decide(client, b"", METRICS, [], 0.0, session_prompt="quiero un look luminoso")
+    system = client.messages.create.call_args.kwargs["system"]
+    assert "quiero un look luminoso" in system
+    assert "ESTA sesión" in system

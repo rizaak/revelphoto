@@ -72,3 +72,28 @@ def test_compute_local_only():
 def test_local_only_angle_zero_no_crop_flag():
     s = compute_settings(METRICS, [], rotation=0.0, ai=None)
     assert not s.has_crop and s.crop_angle == 0.0
+
+
+def test_exposure_bias_added_and_clamped():
+    s = compute_settings(METRICS, [], 0.0, AI, as_shot_temp=5200, exposure_bias=0.4)
+    assert s.exposure == 0.7  # 0.3 de la IA + 0.4 de sesgo
+    s2 = compute_settings(METRICS, [], 0.0, AI, exposure_bias=5.0)
+    assert s2.exposure == 1.5  # tope total
+
+
+def test_temp_bias_creates_custom_from_camera_wb():
+    s = compute_settings(METRICS, [], 0.0, AI, as_shot_temp=5200, temp_bias=300)
+    assert s.temperature == 5500 and s.temp_shift == 300
+
+
+def test_temp_bias_stacks_on_ai_shift():
+    ai_calido = replace(AI, temp_shift=400)
+    s = compute_settings(METRICS, [], 0.0, ai_calido, as_shot_temp=5000, temp_bias=-200)
+    assert s.temperature == 5200  # (5000+400) - 200
+
+
+def test_bias_applies_in_local_mode_too():
+    s = compute_settings(METRICS, [], 0.0, None, as_shot_temp=5200,
+                         exposure_bias=0.3, temp_bias=250)
+    assert s.temperature == 5450
+    assert s.exposure > 0.3  # exposición local + sesgo

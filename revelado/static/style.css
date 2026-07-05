@@ -53,3 +53,15 @@ button:disabled { opacity: .4; cursor: default; }
                  display: flex; justify-content: space-between; }
 #lr-sources li:last-child { border-bottom: none; }
 #lr-sources li:hover { background: #22252c; }
+#session-opts { background: #1b1e24; border: 1px solid #2a2e37; border-radius: 8px;
+                padding: .8rem; margin-bottom: 1rem; display: grid; gap: .6rem; }
+.opt-row { display: flex; align-items: center; gap: .6rem; }
+.opt-row input[type=range] { flex: 1; accent-color: #3b6ef5; }
+.opt-label { font-size: .8rem; color: #9aa0aa; white-space: nowrap; }
+.opt-val { font-size: .8rem; color: #e8e8e8; min-width: 4.5rem; text-align: right; }
+#session-prompt { background: #16181d; color: #e8e8e8; border: 1px solid #3a3f4a;
+                  border-radius: 8px; padding: .5rem .7rem; font: inherit; resize: vertical; }
+#chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+#chips button { font-size: .75rem; padding: .25rem .6rem; border-radius: 999px;
+                background: #22252c; }
+#chips button:hover { background: #2f3947; }

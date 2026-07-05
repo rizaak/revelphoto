@@ -73,16 +73,33 @@ def _wb_from_shift(as_shot_temp: int | None, temp_shift: int,
     return temperature, tint_shift
 
 
+def _apply_session_bias(s: DevelopSettings, as_shot_temp: int | None,
+                        exposure_bias: float, temp_bias: int) -> DevelopSettings:
+    """Sesgo de sesión del fotógrafo: se suma al resultado de IA/armonía."""
+    if exposure_bias:
+        limit = SETTINGS.max_total_exposure
+        s.exposure = round(min(max(s.exposure + exposure_bias, -limit), limit), 2)
+    if temp_bias:
+        if s.temperature is not None:
+            s.temperature = min(max(s.temperature + temp_bias, 2000), 50000)
+        elif as_shot_temp is not None:
+            s.temperature = min(max(as_shot_temp + temp_bias, 2000), 50000)
+        s.temp_shift += temp_bias
+    return s
+
+
 def compute_settings(metrics: GlobalMetrics, faces: list[Face],
                      rotation: float, ai: AIDecision | None,
-                     as_shot_temp: int | None = None) -> DevelopSettings:
+                     as_shot_temp: int | None = None,
+                     exposure_bias: float = 0.0,
+                     temp_bias: int = 0) -> DevelopSettings:
     masks = [m for m in (face_mask_for(f) for f in faces) if m is not None]
 
     if ai is not None:
         has_crop = ai.crop is not None or ai.angle != 0.0
         crop = ai.crop or (0.0, 0.0, 1.0, 1.0)
         temperature, tint = _wb_from_shift(as_shot_temp, ai.temp_shift, ai.tint_shift)
-        return DevelopSettings(
+        return _apply_session_bias(DevelopSettings(
             temp_shift=ai.temp_shift if temperature is not None else 0,
             temperature=temperature, tint=tint,
             exposure=ai.exposure, contrast=ai.contrast,
@@ -95,7 +112,7 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
             crop_right=crop[2], crop_bottom=crop[3],
             crop_angle=ai.angle,
             masks=masks, ai_used=True,
-        )
+        ), as_shot_temp, exposure_bias, temp_bias)
 
     # Modo solo-local: correcciones técnicas conservadoras
     target = 0.45
@@ -106,7 +123,7 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
                        min(SETTINGS.max_global_exposure, exposure))
     highlights = -30 if metrics.clip_highlights > 0.005 else 0
     shadows = 20 if metrics.clip_shadows > 0.005 else 0
-    return DevelopSettings(
+    return _apply_session_bias(DevelopSettings(
         # El color solo lo decide la IA: en modo local el WB se queda "As Shot"
         temperature=None, tint=0,
         exposure=round(exposure, 2), contrast=0,
@@ -117,4 +134,4 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
         crop_left=0.0, crop_top=0.0, crop_right=1.0, crop_bottom=1.0,
         crop_angle=rotation,
         masks=masks, ai_used=False,
-    )
+    ), as_shot_temp, exposure_bias, temp_bias)

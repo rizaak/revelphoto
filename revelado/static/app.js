@@ -116,11 +116,55 @@ $("select-all").onclick = () => {
   $("process").textContent = `Procesar ${state.selected.size} foto(s)`;
 };
 
+// --- Opciones de sesión: sesgos e indicaciones para la IA ---
+const CHIP_SUGGESTIONS = [
+  "Luminosas y aireadas",
+  "Cálidas y acogedoras",
+  "Frías y limpias",
+  "Contraste suave, acabado mate",
+  "Colores vivos y saturados",
+  "Piel natural y uniforme",
+  "Respeta el ambiente de la luz original",
+  "Estilo editorial elegante",
+];
+
+function initSessionOpts() {
+  const chips = $("chips");
+  for (const text of CHIP_SUGGESTIONS) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = "+ " + text;
+    b.onclick = () => {
+      const area = $("session-prompt");
+      area.value = (area.value.trim() ? area.value.trim() + ". " : "") + text;
+    };
+    chips.appendChild(b);
+  }
+  $("bias-expo").oninput = () => {
+    const v = parseFloat($("bias-expo").value);
+    $("bias-expo-val").textContent = `${v > 0 ? "+" : ""}${v.toFixed(1)} EV`;
+  };
+  $("bias-temp").oninput = () => {
+    const v = parseInt($("bias-temp").value, 10);
+    $("bias-temp-val").textContent = `${v > 0 ? "+" : ""}${v} K`;
+  };
+}
+
+function sessionOpts() {
+  return {
+    overwrite: $("overwrite").checked,
+    harmonize: $("harmonize").checked,
+    exposure_bias: parseFloat($("bias-expo").value) || 0,
+    temp_bias: parseInt($("bias-temp").value, 10) || 0,
+    session_prompt: $("session-prompt").value.trim(),
+  };
+}
+
 // --- Pantalla 3: progreso ---
 $("process").onclick = async () => {
   if (Notification.permission === "default") await Notification.requestPermission();
-  const body = { files: [...state.selected], overwrite: $("overwrite").checked,
-                 harmonize: $("harmonize").checked };
+  state.opts = sessionOpts();
+  const body = { files: [...state.selected], ...state.opts };
   const { job_id, local_only } = await api("/api/process", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -221,7 +265,8 @@ function renderReview() {
       const { job_id } = await api("/api/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ files: [ev.path], overwrite: true }),
+        body: JSON.stringify({ files: [ev.path], ...(state.opts || {}),
+                               overwrite: true }),
       });
       const source = new EventSource(`/api/jobs/${job_id}/events`);
       source.onmessage = (msg) => {
@@ -246,5 +291,6 @@ function renderReview() {
 $("show-review").onclick = renderReview;
 $("review-back").onclick = () => show("progress");
 
+initSessionOpts();
 loadDirs();
 loadLrcat();

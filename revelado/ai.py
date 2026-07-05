@@ -79,7 +79,8 @@ def _style_text() -> str:
 
 def decide(client, preview_jpeg: bytes, metrics: GlobalMetrics,
            faces: list[Face], rotation: float,
-           as_shot_temp: int | None = None) -> AIDecision:
+           as_shot_temp: int | None = None,
+           session_prompt: str = "") -> AIDecision:
     context = {
         "metricas": {
             "luma_media": round(metrics.mean_luma, 3),
@@ -94,6 +95,9 @@ def decide(client, preview_jpeg: bytes, metrics: GlobalMetrics,
     }
     style = _style_text()
     system = _SYSTEM + (f"\n\nPreferencias del fotógrafo (síguelas):\n{style}" if style else "")
+    if session_prompt.strip():
+        system += ("\n\nIndicaciones para ESTA sesión (prioritarias sobre lo demás):\n"
+                   + session_prompt.strip()[:2000])
     try:
         response = client.messages.create(
             model=SETTINGS.model,

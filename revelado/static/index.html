@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Revelado — asistente para Lightroom</title>
-  <link rel="stylesheet" href="/static/style.css?v=4">
+  <link rel="stylesheet" href="/static/style.css?v=5">
 </head>
 <body>
   <header>
@@ -25,6 +25,23 @@
       <label><input type="checkbox" id="overwrite"> Sobrescribir XMP existentes</label>
       <label><input type="checkbox" id="harmonize" checked> Armonizar sesión (mismo look por escena)</label>
       <button id="process" class="primary" disabled>Procesar seleccionadas</button>
+    </div>
+    <div id="session-opts">
+      <div class="opt-row">
+        <span class="opt-label">🌙 Más oscuras</span>
+        <input type="range" id="bias-expo" min="-1" max="1" step="0.1" value="0">
+        <span class="opt-label">Más claras ☀️</span>
+        <span class="opt-val" id="bias-expo-val">0.0 EV</span>
+      </div>
+      <div class="opt-row">
+        <span class="opt-label">❄️ Más frías</span>
+        <input type="range" id="bias-temp" min="-800" max="800" step="50" value="0">
+        <span class="opt-label">Más cálidas 🔥</span>
+        <span class="opt-val" id="bias-temp-val">0 K</span>
+      </div>
+      <textarea id="session-prompt" rows="2"
+        placeholder="Indicaciones para la IA en esta sesión (opcional): escribe con tus palabras cómo quieres las fotos…"></textarea>
+      <div id="chips"></div>
     </div>
     <div id="grid"></div>
   </section>
@@ -48,6 +65,6 @@
     <div id="review-grid"></div>
   </section>
 
-  <script src="/static/app.js?v=4"></script>
+  <script src="/static/app.js?v=5"></script>
 </body>
 </html>

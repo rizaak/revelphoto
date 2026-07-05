@@ -37,6 +37,9 @@ class ProcessRequest(BaseModel):
     files: list[str]
     overwrite: bool = False
     harmonize: bool = True  # armonía de sesión: mismo look por escena
+    exposure_bias: float = 0.0   # sesgo de sesión: más oscuras/claras (EV)
+    temp_bias: int = 0           # sesgo de sesión: más frías/cálidas (Kelvin)
+    session_prompt: str = ""     # indicaciones del fotógrafo para esta sesión
 
 
 def _thumb_bytes(raw: Path) -> bytes:
@@ -152,10 +155,15 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
         if missing:
             raise HTTPException(400, f"Archivos inexistentes: {missing[0]}")
         client = make_client()
-        analyzer = lambda p, ow: analyze_photo(p, ow, client)
+        exposure_bias = min(max(req.exposure_bias, -1.0), 1.0)
+        temp_bias = min(max(req.temp_bias, -800), 800)
+        analyzer = lambda p, ow: analyze_photo(p, ow, client,
+                                               session_prompt=req.session_prompt)
+        finalizer = lambda a, ow: finalize_photo(a, ow, exposure_bias=exposure_bias,
+                                                 temp_bias=temp_bias)
         harmonizer = harmonize if req.harmonize and len(paths) > 1 else None
         job_id = manager.create_job(paths, req.overwrite, analyzer,
-                                    finalize_photo, harmonizer)
+                                    finalizer, harmonizer)
         return {"job_id": job_id, "local_only": client is None}
 
     @app.get("/api/jobs/{job_id}")

@@ -38,7 +38,8 @@ class PhotoAnalysis:
     ai: AIDecision | None = None
 
 
-def analyze_photo(raw_path: Path, overwrite: bool, client) -> PhotoAnalysis:
+def analyze_photo(raw_path: Path, overwrite: bool, client,
+                  session_prompt: str = "") -> PhotoAnalysis:
     """Fase 1: análisis local + decisión de la IA (sin escribir nada)."""
     try:
         if sidecar_path(raw_path).exists() and not overwrite:
@@ -55,7 +56,8 @@ def analyze_photo(raw_path: Path, overwrite: bool, client) -> PhotoAnalysis:
         if client is not None:
             try:
                 ai = decide(client, encode_jpeg(img), metrics, faces, rotation,
-                            as_shot_temp=exif.color_temp)
+                            as_shot_temp=exif.color_temp,
+                            session_prompt=session_prompt)
             except AIUnavailable as exc:
                 log.warning("API no disponible para %s: %s", raw_path.name, exc)
 
@@ -66,7 +68,8 @@ def analyze_photo(raw_path: Path, overwrite: bool, client) -> PhotoAnalysis:
         return PhotoAnalysis(raw_path, error=f"{type(exc).__name__}: {exc}")
 
 
-def finalize_photo(analysis: PhotoAnalysis, overwrite: bool) -> PhotoResult:
+def finalize_photo(analysis: PhotoAnalysis, overwrite: bool,
+                   exposure_bias: float = 0.0, temp_bias: int = 0) -> PhotoResult:
     """Fase 2: calcular ajustes finales y escribir el XMP."""
     raw_path = analysis.path
     if analysis.skipped:
@@ -77,7 +80,9 @@ def finalize_photo(analysis: PhotoAnalysis, overwrite: bool) -> PhotoResult:
         as_shot = analysis.exif.color_temp if analysis.exif else None
         settings = compute_settings(analysis.metrics, analysis.faces,
                                     analysis.rotation, analysis.ai,
-                                    as_shot_temp=as_shot)
+                                    as_shot_temp=as_shot,
+                                    exposure_bias=exposure_bias,
+                                    temp_bias=temp_bias)
         write_sidecar(raw_path, settings, overwrite=overwrite)
         status = "done" if analysis.ai is not None else "done_local_only"
         return PhotoResult(str(raw_path), status, settings=settings)
