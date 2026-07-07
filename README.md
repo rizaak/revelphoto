@@ -22,6 +22,13 @@ fino en Lightroom, partiendo del 90% hecho.
 - **Indicaciones a la IA por sesión** con briefs de editor listos para usar
   (luminoso y aireado, cálido, mate, editorial…), más tu estilo permanente
   en `estilo.txt`.
+- **Culling con estrellas (1–5)**: la IA puntúa cada foto (ojos cerrados,
+  sujeto desenfocado, expresión, momento) y entre las tomas de una ráfaga
+  destaca solo la mejor. En Lightroom aparecen como estrellas normales.
+- **Aprende tu estilo**: lee los XMP de sesiones que TÚ editaste a mano y
+  convierte tus tendencias en preferencias guardadas en `estilo.txt`.
+- **Presets de briefs**: guarda con nombre tus combinaciones favoritas de
+  indicaciones + deslizadores («Bodas exterior», «Estudio», …).
 - **Revisión antes/después** simulada en el servidor, con descarte y
   reprocesado por foto, y borrado de XMP en lote.
 - **Lee tu catálogo de Lightroom (solo lectura)** para elegir carpetas y
@@ -54,6 +61,37 @@ es de centavos por sesión de cientos de fotos.
 - **Fotos ya importadas:** procesa y luego en Lightroom selecciona todo →
   *Metadatos → Leer metadatos desde archivos*. (Así además funciona el
   antes/después nativo con la tecla `\`.)
+
+## Estrellas y selección (culling)
+
+Con la casilla **«Puntuar con estrellas (1–5)»** marcada (lo está por
+defecto), cada foto procesada llega a Lightroom ya puntuada:
+
+- 5 excepcional · 4 buena · 3 correcta · 2 con un problema claro (ojos
+  cerrados, desenfocada, mala expresión) · 1 fallida.
+- En una ráfaga (tomas a menos de 2 segundos), solo la mejor conserva su
+  puntuación; las repetidas bajan un escalón.
+- En Lightroom, filtra por «3 estrellas o más» y repasa solo lo bueno. Las
+  estrellas se cambian ahí mismo como siempre (teclas 1–5); el motivo de las
+  puntuaciones bajas se ve en la pantalla de progreso y en la revisión.
+
+## Aprender tu estilo
+
+1. En Lightroom, abre una (o varias) sesiones que ya editaste a tu gusto,
+   selecciona las fotos y usa *Metadatos → Guardar metadatos en archivos*
+   (crea los XMP con tus ajustes junto a los RAW).
+2. En Revelado, entra a esa carpeta y pulsa **«🎓 Aprender mi estilo»**.
+3. La IA resume tus tendencias (necesita al menos 5 fotos editadas) y las
+   guarda en un bloque marcado de `estilo.txt`, que puedes editar o borrar.
+   Los XMP generados por Revelado se ignoran: solo aprende de TUS ediciones.
+   Repetirlo reemplaza lo aprendido anterior, sin tocar lo que escribiste a mano.
+
+## Presets de briefs
+
+En el panel de sesión, ajusta los deslizadores y el texto de indicaciones y
+pulsa **«💾 Guardar preset»** para bautizarlo (por ejemplo «Bodas exterior»).
+Después basta elegirlo en el desplegable; 🗑 borra el seleccionado. Se
+guardan en `presets.json`, que viaja con la carpeta si la copias a otro Mac.
 
 ## Personalización
 
