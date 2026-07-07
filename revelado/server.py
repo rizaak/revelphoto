@@ -20,6 +20,7 @@ from revelado.lrcat import CatalogLocked, find_catalogs
 from revelado.lrcat import photos as lrcat_photos
 from revelado.lrcat import sources as lrcat_sources
 from revelado.pipeline import analyze_photo, finalize_photo
+from revelado.presets import delete_preset, list_presets, save_preset
 from revelado.simulate import simulate
 from revelado.xmp import delete_sidecar, sidecar_path
 
@@ -35,6 +36,13 @@ def _default_client_factory():
 
 class XmpDeleteRequest(BaseModel):
     files: list[str]
+
+
+class PresetRequest(BaseModel):
+    name: str
+    prompt: str = ""
+    exposure_bias: float = 0.0
+    temp_bias: int = 0
 
 
 class ProcessRequest(BaseModel):
@@ -187,6 +195,23 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
         return StreamingResponse(generate(), media_type="text/event-stream")
+
+    @app.get("/api/presets")
+    def presets_list():
+        return {"presets": list_presets()}
+
+    @app.post("/api/presets")
+    def presets_save(req: PresetRequest):
+        name = req.name.strip()
+        if not name:
+            raise HTTPException(400, "El preset necesita un nombre")
+        return save_preset(name, req.prompt,
+                           min(max(req.exposure_bias, -1.0), 1.0),
+                           min(max(req.temp_bias, -800), 800))
+
+    @app.delete("/api/presets")
+    def presets_delete(name: str):
+        return {"deleted": delete_preset(name)}
 
     @app.delete("/api/xmp")
     def remove_xmp(path: str):

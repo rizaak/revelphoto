@@ -56,6 +56,9 @@ button:disabled { opacity: .4; cursor: default; }
 #session-opts { background: #1b1e24; border: 1px solid #2a2e37; border-radius: 8px;
                 padding: .8rem; margin-bottom: 1rem; display: grid; gap: .6rem; }
 .opt-row { display: flex; align-items: center; gap: .6rem; }
+select { background: #2a2e37; color: #e8e8e8; border: 1px solid #3a3f4a;
+         border-radius: 8px; padding: .45rem .6rem; }
+#preset-select { flex: 1; max-width: 20rem; }
 .opt-row input[type=range] { flex: 1; accent-color: #3b6ef5; }
 .opt-label { font-size: .8rem; color: #9aa0aa; white-space: nowrap; }
 .opt-val { font-size: .8rem; color: #e8e8e8; min-width: 4.5rem; text-align: right; }

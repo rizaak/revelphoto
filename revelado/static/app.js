@@ -178,6 +178,56 @@ function initSessionOpts() {
   };
 }
 
+// --- Presets: brief + deslizadores guardados con nombre ---
+async function loadPresets(selectName = "") {
+  const sel = $("preset-select");
+  try {
+    const { presets } = await api("/api/presets");
+    state.presets = presets;
+    sel.innerHTML = '<option value="">Presets guardados…</option>';
+    for (const p of presets) {
+      const o = document.createElement("option");
+      o.value = p.name;
+      o.textContent = p.name;
+      sel.appendChild(o);
+    }
+    sel.value = selectName;
+  } catch (e) { /* sin presets no pasa nada */ }
+}
+
+function initPresets() {
+  const sel = $("preset-select");
+  sel.onchange = () => {
+    const p = (state.presets || []).find((x) => x.name === sel.value);
+    if (!p) return;
+    $("session-prompt").value = p.prompt || "";
+    $("bias-expo").value = p.exposure_bias || 0;
+    $("bias-temp").value = p.temp_bias || 0;
+    $("bias-expo").dispatchEvent(new Event("input"));
+    $("bias-temp").dispatchEvent(new Event("input"));
+  };
+  $("preset-save").onclick = async () => {
+    const name = window.prompt("Nombre del preset (si ya existe, se reemplaza):",
+                               sel.value || "");
+    if (!name || !name.trim()) return;
+    const o = sessionOpts();
+    const saved = await api("/api/presets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), prompt: o.session_prompt,
+                             exposure_bias: o.exposure_bias, temp_bias: o.temp_bias }),
+    });
+    await loadPresets(saved.name);
+  };
+  $("preset-delete").onclick = async () => {
+    if (!sel.value) return;
+    if (!confirm(`¿Borrar el preset «${sel.value}»?`)) return;
+    await api(`/api/presets?name=${encodeURIComponent(sel.value)}`, { method: "DELETE" });
+    await loadPresets();
+  };
+  loadPresets();
+}
+
 function sessionOpts() {
   return {
     overwrite: $("overwrite").checked,
@@ -320,5 +370,6 @@ $("show-review").onclick = renderReview;
 $("review-back").onclick = () => show("progress");
 
 initSessionOpts();
+initPresets();
 loadDirs();
 loadLrcat();

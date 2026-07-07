@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Revelado — asistente para Lightroom</title>
-  <link rel="stylesheet" href="/static/style.css?v=8">
+  <link rel="stylesheet" href="/static/style.css?v=9">
 </head>
 <body>
   <header>
@@ -40,6 +40,11 @@
         <span class="opt-label">Más cálidas 🔥</span>
         <span class="opt-val" id="bias-temp-val">0 K</span>
       </div>
+      <div class="opt-row">
+        <select id="preset-select"><option value="">Presets guardados…</option></select>
+        <button type="button" id="preset-save">💾 Guardar preset</button>
+        <button type="button" id="preset-delete" title="Borrar el preset seleccionado">🗑</button>
+      </div>
       <textarea id="session-prompt" rows="3"
         placeholder="Indicaciones para la IA en esta sesión (opcional): escribe con tus palabras cómo quieres las fotos…"></textarea>
       <div id="chips"><button type="button" id="clear-prompt" class="chip-clear">✕ Borrar texto</button></div>
@@ -66,6 +71,6 @@
     <div id="review-grid"></div>
   </section>
 
-  <script src="/static/app.js?v=8"></script>
+  <script src="/static/app.js?v=9"></script>
 </body>
 </html>
