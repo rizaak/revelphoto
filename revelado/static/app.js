@@ -70,6 +70,7 @@ async function loadLrcat() {
 
 async function openLrGallery(cat, type, id, subtitle) {
   const data = await api(`/api/lrcat/photos?cat=${encodeURIComponent(cat)}&type=${type}&id=${id}`);
+  state.dir = null;  // galería de catálogo: sin carpeta única (p. ej. para aprender estilo)
   state.reloadGallery = () => openLrGallery(cat, type, id, subtitle);
   renderGallery(data.photos.filter((p) => !p.missing), subtitle);
 }
@@ -102,6 +103,7 @@ function renderGallery(photos, subtitle) {
     grid.appendChild(div);
   }
   $("subtitle").textContent = subtitle;
+  $("learn-style").hidden = !state.dir;
   updateToolbar();
   show("gallery");
 }
@@ -124,6 +126,28 @@ $("remove-xmp").onclick = async () => {
   });
   alert(`${deleted} XMP eliminados.`);
   if (state.reloadGallery) state.reloadGallery();
+};
+
+$("learn-style").onclick = async () => {
+  if (!state.dir) return;
+  if (!confirm("Voy a leer los XMP de esta carpeta (ediciones hechas por TI en Lightroom) " +
+               "para aprender tu estilo y guardarlo en estilo.txt. ¿Continuar?")) return;
+  const b = $("learn-style");
+  b.disabled = true;
+  b.textContent = "Aprendiendo…";
+  try {
+    const { count, summary } = await api("/api/style/learn", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dir: state.dir }),
+    });
+    alert(`Estilo aprendido de ${count} fotos y guardado en estilo.txt ` +
+          `(puedes editarlo o borrarlo cuando quieras):\n\n${summary}`);
+  } catch (e) {
+    alert(`No se pudo aprender el estilo: ${e.message}`);
+  }
+  b.disabled = false;
+  b.textContent = "🎓 Aprender mi estilo";
 };
 
 $("back").onclick = () => loadDirs(state.dir ? state.dir.split("/").slice(0, -1).join("/") : "");

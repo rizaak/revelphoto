@@ -11,8 +11,10 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from revelado.ai import AIUnavailable
 from revelado.config import SETTINGS
 from revelado.exif import extract_preview_jpeg, read_exif
+from revelado.learn import apply_learned_style, collect_stats, summarize_style
 from revelado.imageio import decode_upright, encode_jpeg
 from revelado.jobs import JobManager
 from revelado.harmonize import harmonize
@@ -36,6 +38,10 @@ def _default_client_factory():
 
 class XmpDeleteRequest(BaseModel):
     files: list[str]
+
+
+class LearnRequest(BaseModel):
+    dir: str
 
 
 class PresetRequest(BaseModel):
@@ -195,6 +201,29 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
         return StreamingResponse(generate(), media_type="text/event-stream")
+
+    @app.post("/api/style/learn")
+    def style_learn(req: LearnRequest):
+        """Aprende el estilo desde los XMP editados a mano en una carpeta."""
+        base = Path(req.dir).expanduser()
+        if not base.is_dir():
+            raise HTTPException(404, "Carpeta no encontrada")
+        client = make_client()
+        if client is None:
+            raise HTTPException(503, "Se necesita la clave de API para aprender el estilo")
+        stats = collect_stats(base)
+        if stats["count"] < SETTINGS.learn_min_xmp:
+            raise HTTPException(
+                400,
+                f"Se necesitan al menos {SETTINGS.learn_min_xmp} XMP editados por ti "
+                f"(en Lightroom: Metadatos → Guardar metadatos en archivos); "
+                f"se encontraron {stats['count']}")
+        try:
+            summary = summarize_style(client, stats)
+        except AIUnavailable as exc:
+            raise HTTPException(502, f"La IA no pudo resumir el estilo: {exc}")
+        apply_learned_style(summary)
+        return {"count": stats["count"], "summary": summary}
 
     @app.get("/api/presets")
     def presets_list():
