@@ -128,3 +128,35 @@ def test_bulk_xmp_delete(tmp_path):
     assert r.json()["deleted"] == 2  # la 3 no tenía XMP
     assert not (tmp_path / "IMG_1.xmp").exists()
     assert (tmp_path / "IMG_1.CR3").exists()  # el RAW intacto
+
+
+def test_process_ejecuta_armonia_y_rafagas_segun_opciones(tmp_path):
+    raws = []
+    for i in (1, 2):
+        raw = tmp_path / f"IMG_{i}.CR3"
+        raw.write_bytes(b"x")
+        raws.append(str(raw))
+    fake = PhotoResult(raws[0], "done")
+    with patch("revelado.server.analyze_photo",
+               side_effect=lambda p, *a, **k: PhotoAnalysis(p)), \
+         patch("revelado.server.finalize_photo", return_value=fake), \
+         patch("revelado.server.harmonize") as mock_harm, \
+         patch("revelado.server.rank_bursts") as mock_rank:
+        with _client() as client:
+            r = client.post("/api/process", json={"files": raws})
+            _drain(client, r.json()["job_id"])
+            assert mock_harm.call_count == 1
+            assert mock_rank.call_count == 1
+            # con las casillas apagadas no se llama ninguna
+            r = client.post("/api/process", json={"files": raws,
+                                                  "harmonize": False, "rate": False})
+            _drain(client, r.json()["job_id"])
+            assert mock_harm.call_count == 1
+            assert mock_rank.call_count == 1
+
+
+def _drain(client, job_id):
+    with client.stream("GET", f"/api/jobs/{job_id}/events") as resp:
+        for line in resp.iter_lines():
+            if line.startswith("data: ") and '"finished"' in line:
+                break

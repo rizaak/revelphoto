@@ -41,6 +41,8 @@ class DevelopSettings:
     masks: list[RadialMask] = field(default_factory=list)
     ai_used: bool = False
     temp_shift: int = 0  # desviación aplicada respecto al WB de cámara (para la simulación)
+    rating: int | None = None  # estrellas 1-5 para Lightroom; None = no puntuar
+    rating_reason: str = ""
 
 
 def face_mask_for(face: Face, ev: float | None = None) -> RadialMask | None:
@@ -112,7 +114,8 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
                      rotation: float, ai: AIDecision | None,
                      as_shot_temp: int | None = None,
                      exposure_bias: float = 0.0,
-                     temp_bias: int = 0) -> DevelopSettings:
+                     temp_bias: int = 0,
+                     rate: bool = True) -> DevelopSettings:
     if ai is not None:
         masks = _masks_from_ai(faces, ai)
         has_crop = ai.crop is not None or ai.angle != 0.0
@@ -131,6 +134,8 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
             crop_right=crop[2], crop_bottom=crop[3],
             crop_angle=ai.angle,
             masks=masks, ai_used=True,
+            rating=ai.rating if rate else None,
+            rating_reason=ai.rating_reason if rate else "",
         ), as_shot_temp, exposure_bias, temp_bias)
 
     # Modo solo-local: correcciones técnicas conservadoras

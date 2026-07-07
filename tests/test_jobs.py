@@ -110,7 +110,8 @@ async def test_photo_event_includes_adjust():
         shadows=25, whites=0, blacks=0, sharpness=45, luminance_smoothing=15,
         has_crop=True, crop_left=0.1, crop_top=0.05, crop_right=0.95,
         crop_bottom=0.9, crop_angle=-1.5,
-        masks=[RadialMask(0.3, 0.2, 0.6, 0.5, 1.0, 25)], ai_used=True)
+        masks=[RadialMask(0.3, 0.2, 0.6, 0.5, 1.0, 25)], ai_used=True,
+        rating=4, rating_reason="buen momento")
 
     def finalizer(analysis, overwrite):
         return PhotoResult(str(analysis.path), "done", settings=settings)
@@ -122,4 +123,5 @@ async def test_photo_event_includes_adjust():
     assert photo["adjust"] == {"exposure": 0.4, "angle": -1.5,
                                "crop": [0.1, 0.05, 0.95, 0.9], "masks": 1,
                                "temp_shift": 0, "tint": 5, "contrast": 10,
-                               "highlights": -20, "shadows": 25}
+                               "highlights": -20, "shadows": 25,
+                               "rating": 4, "rating_reason": "buen momento"}

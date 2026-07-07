@@ -256,10 +256,18 @@ function sessionOpts() {
   return {
     overwrite: $("overwrite").checked,
     harmonize: $("harmonize").checked,
+    rate: $("rate").checked,
     exposure_bias: parseFloat($("bias-expo").value) || 0,
     temp_bias: parseInt($("bias-temp").value, 10) || 0,
     session_prompt: $("session-prompt").value.trim(),
   };
+}
+
+// Estrellas de culling (xmp:Rating) para el registro y la revisión
+function starsOf(ev) {
+  const r = ev.adjust && ev.adjust.rating;
+  if (!r) return "";
+  return "★".repeat(r) + "☆".repeat(5 - r);
 }
 
 // --- Pantalla 3: progreso ---
@@ -295,7 +303,10 @@ $("process").onclick = async () => {
       const name = ev.path.split("/").pop();
       const labels = { done: "✓", done_local_only: "✓ (solo local)",
                        skipped_existing: "⏭ ya tenía XMP", error: "✗" };
-      li.textContent = `${labels[ev.status] || ev.status} ${name} ${ev.message || ""}`;
+      const reason = ev.adjust && ev.adjust.rating_reason
+        ? ` — ${ev.adjust.rating_reason}` : "";
+      li.textContent = `${labels[ev.status] || ev.status} ${name} ` +
+        `${starsOf(ev)}${reason} ${ev.message || ""}`;
       if (ev.status === "error") li.className = "error";
       if (ev.status === "skipped_existing") li.className = "skipped";
       $("log").prepend(li);
@@ -353,7 +364,8 @@ function renderReview() {
         <div><div class="frame"><img src="${previewURL(ev)}"></div>
              <div class="caption">Después${ev.adjust && ev.adjust.masks ? ` · ${ev.adjust.masks} máscara(s)` : ""}</div></div>
       </div>
-      <div class="caption">${name}</div>
+      <div class="caption">${name}${starsOf(ev) ? ` · ${starsOf(ev)}` : ""}${
+        ev.adjust && ev.adjust.rating_reason ? ` · ${ev.adjust.rating_reason}` : ""}</div>
       <div class="actions">
         <button class="discard">Descartar edición</button>
         <button class="redo">Reprocesar</button>

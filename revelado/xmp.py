@@ -80,10 +80,16 @@ def render_xmp(s: DevelopSettings) -> str:
     </rdf:Seq>
    </crs:CircularGradientBasedCorrections>"""
 
+    rating_attrs = ""
+    if s.rating is not None:
+        rating_attrs = f"""
+   xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+   xmp:Rating="{min(max(s.rating, 1), 5)}\""""
+
     return f"""<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="revelado">
  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   <rdf:Description rdf:about=""
-   xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+   xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"{rating_attrs}
    crs:Version="11.0"
    crs:ProcessVersion="11.0"{wb_attrs}
    crs:Exposure2012="{_fmt_signed_float(s.exposure)}"

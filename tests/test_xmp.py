@@ -82,3 +82,16 @@ def test_delete(tmp_path):
     write_sidecar(raw, _settings())
     assert delete_sidecar(raw) is True
     assert delete_sidecar(raw) is False
+
+
+def test_render_rating_como_estrellas():
+    s = _settings()
+    s.rating = 4
+    text = render_xmp(s)
+    assert 'xmp:Rating="4"' in text
+    assert 'xmlns:xmp="http://ns.adobe.com/xap/1.0/"' in text
+    ET.fromstring(text)  # sigue siendo XML válido
+
+
+def test_render_sin_rating_no_escribe_estrellas():
+    assert "Rating" not in render_xmp(_settings())

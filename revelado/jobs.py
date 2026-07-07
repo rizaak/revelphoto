@@ -93,6 +93,7 @@ class JobManager:
                         "temp_shift": s.temp_shift, "tint": s.tint,
                         "contrast": s.contrast, "highlights": s.highlights,
                         "shadows": s.shadows,
+                        "rating": s.rating, "rating_reason": s.rating_reason,
                     }
             except Exception as exc:
                 # Nunca dejar el lote sin evento: convertir en error

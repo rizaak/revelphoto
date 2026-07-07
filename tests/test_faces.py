@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from revelado.analysis.faces import detect_faces, face_luma
+from revelado.analysis.faces import detect_faces, face_luma, face_sharpness
 from revelado.config import SETTINGS
 
 
@@ -30,3 +30,17 @@ def test_detect_faces_runs_on_blank_image():
     img = np.full((400, 400, 3), 128, dtype=np.uint8)
     faces = detect_faces(img, SETTINGS.yunet_model_path)
     assert faces == []  # sin caras en imagen plana
+
+
+def test_face_sharpness_distingue_detalle_de_liso():
+    rng = np.random.default_rng(7)
+    ruido = rng.integers(0, 255, (100, 100), dtype=np.uint8)
+    con_detalle = np.dstack([ruido, ruido, ruido])
+    liso = np.full((100, 100, 3), 120, dtype=np.uint8)
+    assert face_sharpness(con_detalle, 0.2, 0.2, 0.6, 0.6) > 100
+    assert face_sharpness(liso, 0.2, 0.2, 0.6, 0.6) == 0.0
+
+
+def test_face_sharpness_recuadro_fuera_de_rango():
+    img = np.full((50, 50, 3), 120, dtype=np.uint8)
+    assert face_sharpness(img, 2.0, 2.0, 0.1, 0.1) == 0.0

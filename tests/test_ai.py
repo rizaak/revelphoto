@@ -94,3 +94,29 @@ def test_face_lifts_parsed_and_clamped():
                       face_lifts=((0, 9.0), (1, -3.0)))
     c = clamp_decision(wild)
     assert c.face_lifts == ((0, 1.5), (1, -0.5))
+
+
+def test_decide_parsea_rating_y_motivo():
+    payload = dict(VALID, rating=2, rating_reason="  ojos cerrados ")
+    d = decide(_client_returning(json.dumps(payload)), b"", METRICS, [], 0.0)
+    assert d.rating == 2 and d.rating_reason == "ojos cerrados"
+
+
+def test_decide_rating_ausente_vale_3():
+    d = decide(_client_returning(json.dumps(VALID)), b"", METRICS, [], 0.0)
+    assert d.rating == 3 and d.rating_reason == ""
+
+
+def test_rating_se_recorta_a_1_5():
+    alto = dict(VALID, rating=9)
+    bajo = dict(VALID, rating=0)
+    assert decide(_client_returning(json.dumps(alto)), b"", METRICS, [], 0.0).rating == 5
+    assert decide(_client_returning(json.dumps(bajo)), b"", METRICS, [], 0.0).rating == 1
+
+
+def test_contexto_incluye_nitidez_de_caras():
+    client = _client_returning(json.dumps(VALID))
+    decide(client, b"", METRICS,
+           [Face(0.4, 0.3, 0.1, 0.15, luma=0.5, sharpness=42.5)], 0.0)
+    texto = client.messages.create.call_args.kwargs["messages"][0]["content"][1]["text"]
+    assert '"nitidez": 42.5' in texto and '"nitidez_global"' in texto

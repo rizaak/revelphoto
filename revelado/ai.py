@@ -22,6 +22,8 @@ class AIDecision:
     temp_shift: int  # desviación en Kelvin respecto al WB de cámara (+ = más cálido)
     tint_shift: int  # desviación de tinte (+ = más magenta)
     face_lifts: tuple[tuple[int, float], ...] = ()  # (índice de cara, EV local)
+    rating: int = 3          # puntuación de culling 1-5 (estrellas en Lightroom)
+    rating_reason: str = ""  # motivo corto en español (vacío si no hay nada que señalar)
 
 
 _CROP_PROPS = {k: {"type": "number"} for k in ("left", "top", "right", "bottom")}
@@ -45,9 +47,12 @@ DECISION_SCHEMA = {
             "properties": {"index": {"type": "integer"}, "ev": {"type": "number"}},
             "required": ["index", "ev"], "additionalProperties": False,
         }},
+        "rating": {"type": "integer"},
+        "rating_reason": {"type": "string"},
     },
     "required": ["crop", "angle", "exposure", "contrast", "highlights",
-                 "shadows", "temp_shift", "tint_shift", "face_lifts"],
+                 "shadows", "temp_shift", "tint_shift", "face_lifts",
+                 "rating", "rating_reason"],
     "additionalProperties": False,
 }
 
@@ -76,7 +81,15 @@ _SYSTEM = (
     "notablemente más apagado que los demás o que el fondo — inclúyelo como "
     "{index, ev}: ev positivo lo aclara (típico 0.3 a 1.2), negativo leve (hasta -0.5) "
     "si está quemado. Se aplicará como máscara radial SOLO sobre esa cara, sin tocar "
-    "el resto de la imagen. Si ningún rostro lo necesita, devuelve []."
+    "el resto de la imagen. Si ningún rostro lo necesita, devuelve [].\n"
+    "Puntuación (rating, 1-5): valora la foto como lo haría el fotógrafo al "
+    "seleccionar: 5 excepcional (nítida donde importa, expresión y momento "
+    "excelentes), 4 buena, 3 correcta, 2 con un problema claro (ojos cerrados, "
+    "sujeto desenfocado, expresión desafortunada), 1 fallida. Cada cara trae su "
+    "nitidez medida (varianza del laplaciano: compárala entre caras y con la "
+    "nitidez global; un valor muy inferior sugiere sujeto desenfocado). En caso "
+    "de duda, 3. rating_reason: el motivo en español en 8 palabras o menos, o "
+    "cadena vacía si no hay nada que señalar."
 )
 
 
@@ -98,12 +111,14 @@ def decide(client, preview_jpeg: bytes, metrics: GlobalMetrics,
             "luma_media": round(metrics.mean_luma, 3),
             "recorte_sombras": round(metrics.clip_shadows, 4),
             "recorte_altas_luces": round(metrics.clip_highlights, 4),
+            "nitidez_global": round(metrics.sharpness, 1),
             "iso": metrics.iso,
         },
         "wb_camara_kelvin": as_shot_temp,
         "rotacion_estimada_grados": round(rotation, 2),
         "caras": [{"x": round(f.x, 3), "y": round(f.y, 3), "w": round(f.w, 3),
-                   "h": round(f.h, 3), "luma": round(f.luma, 3)} for f in faces],
+                   "h": round(f.h, 3), "luma": round(f.luma, 3),
+                   "nitidez": round(f.sharpness, 1)} for f in faces],
     }
     style = _style_text()
     system = _SYSTEM + (f"\n\nPreferencias del fotógrafo (síguelas):\n{style}" if style else "")
@@ -142,6 +157,8 @@ def decide(client, preview_jpeg: bytes, metrics: GlobalMetrics,
             tint_shift=int(data["tint_shift"]),
             face_lifts=tuple((int(f["index"]), float(f["ev"]))
                              for f in data.get("face_lifts", [])),
+            rating=int(data.get("rating", 3)),
+            rating_reason=str(data.get("rating_reason", "")).strip(),
         ))
     except AIUnavailable:
         raise
@@ -171,4 +188,6 @@ def clamp_decision(d: AIDecision) -> AIDecision:
         tint_shift=min(max(d.tint_shift, -SETTINGS.max_tint_shift), SETTINGS.max_tint_shift),
         face_lifts=tuple((i, min(max(ev, SETTINGS.min_face_ev), SETTINGS.max_face_ev))
                          for i, ev in d.face_lifts),
+        rating=min(max(d.rating, 1), 5),
+        rating_reason=d.rating_reason[:120],
     )

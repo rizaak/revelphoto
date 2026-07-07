@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from revelado.ai import AIUnavailable
 from revelado.config import SETTINGS
+from revelado.cull import rank_bursts
 from revelado.exif import extract_preview_jpeg, read_exif
 from revelado.learn import apply_learned_style, collect_stats, summarize_style
 from revelado.imageio import decode_upright, encode_jpeg
@@ -55,6 +56,7 @@ class ProcessRequest(BaseModel):
     files: list[str]
     overwrite: bool = False
     harmonize: bool = True  # armonía de sesión: mismo look por escena
+    rate: bool = True            # puntuar con estrellas 1-5 (culling)
     exposure_bias: float = 0.0   # sesgo de sesión: más oscuras/claras (EV)
     temp_bias: int = 0           # sesgo de sesión: más frías/cálidas (Kelvin)
     session_prompt: str = ""     # indicaciones del fotógrafo para esta sesión
@@ -178,8 +180,16 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
         analyzer = lambda p, ow: analyze_photo(p, ow, client,
                                                session_prompt=req.session_prompt)
         finalizer = lambda a, ow: finalize_photo(a, ow, exposure_bias=exposure_bias,
-                                                 temp_bias=temp_bias)
-        harmonizer = harmonize if req.harmonize and len(paths) > 1 else None
+                                                 temp_bias=temp_bias, rate=req.rate)
+        do_harmony = req.harmonize and len(paths) > 1
+        do_bursts = req.rate and len(paths) > 1
+        harmonizer = None
+        if do_harmony or do_bursts:
+            def harmonizer(analyses):
+                if do_harmony:
+                    harmonize(analyses)
+                if do_bursts:
+                    rank_bursts(analyses)
         job_id = manager.create_job(paths, req.overwrite, analyzer,
                                     finalizer, harmonizer)
         return {"job_id": job_id, "local_only": client is None}

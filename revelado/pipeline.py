@@ -69,7 +69,8 @@ def analyze_photo(raw_path: Path, overwrite: bool, client,
 
 
 def finalize_photo(analysis: PhotoAnalysis, overwrite: bool,
-                   exposure_bias: float = 0.0, temp_bias: int = 0) -> PhotoResult:
+                   exposure_bias: float = 0.0, temp_bias: int = 0,
+                   rate: bool = True) -> PhotoResult:
     """Fase 2: calcular ajustes finales y escribir el XMP."""
     raw_path = analysis.path
     if analysis.skipped:
@@ -82,7 +83,7 @@ def finalize_photo(analysis: PhotoAnalysis, overwrite: bool,
                                     analysis.rotation, analysis.ai,
                                     as_shot_temp=as_shot,
                                     exposure_bias=exposure_bias,
-                                    temp_bias=temp_bias)
+                                    temp_bias=temp_bias, rate=rate)
         write_sidecar(raw_path, settings, overwrite=overwrite)
         status = "done" if analysis.ai is not None else "done_local_only"
         return PhotoResult(str(raw_path), status, settings=settings)
