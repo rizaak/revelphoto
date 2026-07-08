@@ -8,3 +8,5 @@ samples/
 .env
 Revelado.app/
 presets.json
+sample/
+.DS_Store
