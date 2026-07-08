@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from revelado.ai import AIUnavailable
 from revelado.config import SETTINGS
-from revelado.cull import rank_bursts
+from revelado.cull import flag_blurry, rank_bursts
 from revelado.exif import extract_preview_jpeg, read_exif
 from revelado.learn import apply_learned_style, collect_stats, summarize_style
 from revelado.imageio import decode_upright, encode_jpeg
@@ -189,6 +189,7 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
                 if do_harmony:
                     harmonize(analyses)
                 if do_bursts:
+                    flag_blurry(analyses)  # antes que las ráfagas: la nota ya corregida
                     rank_bursts(analyses)
         job_id = manager.create_job(paths, req.overwrite, analyzer,
                                     finalizer, harmonizer)

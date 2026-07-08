@@ -41,6 +41,7 @@ class Settings:
     style_path: Path = _ROOT / "estilo.txt"
     presets_path: Path = _ROOT / "presets.json"
     burst_gap: int = 2             # segundos entre tomas para considerarlas ráfaga
+    blur_ratio: float = 0.2        # nitidez < 20% de la mediana de la sesión => desenfocada
     learn_min_xmp: int = 5         # mínimo de XMP editados para aprender el estilo
     harmony_time_gap: int = 480     # segundos entre tomas para considerar nueva escena
     harmony_wb_delta: int = 400     # cambio de WB de cámara (K) que marca nueva escena

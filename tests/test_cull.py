@@ -1,4 +1,5 @@
 from pathlib import Path
+from dataclasses import replace
 
 from revelado.ai import AIDecision
 from revelado.analysis.faces import Face
@@ -80,3 +81,54 @@ def test_suelo_de_una_estrella():
     b = _photo("B", 101.0, rating=1, face_sharp=50.0)
     rank_bursts([a, b])
     assert b.ai.rating == 1  # nunca por debajo de 1
+
+
+def _sesion(*sharps, global_sharp=None):
+    fotos = []
+    for i, fs in enumerate(sharps):
+        p = _photo(f"S{i}", 100.0 + i * 60, rating=4, face_sharp=fs)
+        if global_sharp is not None:
+            p.metrics = _metrics(global_sharp[i])
+        fotos.append(p)
+    return fotos
+
+def test_desenfocada_respecto_a_la_sesion_baja_a_2():
+    from revelado.cull import flag_blurry
+    fotos = _sesion(100.0, 110.0, 95.0, 5.0, global_sharp=[300, 310, 290, 8])
+    flag_blurry(fotos)
+    assert [f.ai.rating for f in fotos] == [4, 4, 4, 2]
+    assert fotos[3].ai.rating_reason == "desenfocada o movida"
+
+def test_nitidas_no_se_tocan_aunque_varien():
+    from revelado.cull import flag_blurry
+    fotos = _sesion(60.0, 120.0, 90.0)  # variación normal de una sesión
+    flag_blurry(fotos)
+    assert all(f.ai.rating == 4 for f in fotos)
+
+def test_borrosa_pero_fondo_nitido_no_se_marca():
+    """Solo cara baja (p.ej. cara pequeña y lejana): sin caída global, no se toca."""
+    from revelado.cull import flag_blurry
+    fotos = _sesion(100.0, 110.0, 12.0, global_sharp=[300, 310, 295])
+    flag_blurry(fotos)
+    assert fotos[2].ai.rating == 4
+
+def test_motivo_existente_no_se_pisa_al_marcar_borrosa():
+    from revelado.cull import flag_blurry
+    fotos = _sesion(100.0, 110.0, 95.0, 5.0, global_sharp=[300, 310, 290, 8])
+    fotos[3].ai = replace(fotos[3].ai, rating_reason="ojos cerrados")
+    flag_blurry(fotos)
+    assert fotos[3].ai.rating == 2
+    assert fotos[3].ai.rating_reason == "ojos cerrados"
+
+def test_sesion_de_una_foto_no_hace_nada():
+    from revelado.cull import flag_blurry
+    fotos = _sesion(5.0)
+    flag_blurry(fotos)
+    assert fotos[0].ai.rating == 4
+
+def test_fotos_sin_ia_se_ignoran_al_marcar_borrosas():
+    from revelado.cull import flag_blurry
+    fotos = _sesion(100.0, 110.0, 5.0, global_sharp=[300, 310, 8])
+    fotos[0].ai = None
+    flag_blurry(fotos)  # no debe fallar
+    assert fotos[2].ai.rating == 2
