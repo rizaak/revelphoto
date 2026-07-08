@@ -56,3 +56,12 @@ def noise_reduction_for(iso: int) -> int:
     if iso <= 6400:
         return 25
     return 40
+
+
+def color_noise_for(iso: int) -> int:
+    # Ruido de color (puntos verdes/magenta) en ISO alto; 25 es el defecto de LR.
+    if iso <= 1600:
+        return 25
+    if iso <= 6400:
+        return 35
+    return 50

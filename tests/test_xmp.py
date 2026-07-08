@@ -95,3 +95,11 @@ def test_render_rating_como_estrellas():
 
 def test_render_sin_rating_no_escribe_estrellas():
     assert "Rating" not in render_xmp(_settings())
+
+
+def test_render_ruido_de_color():
+    s = _settings()
+    s.color_noise = 35
+    root = ET.fromstring(render_xmp(s))
+    desc = root.find(f".//{{{'http://www.w3.org/1999/02/22-rdf-syntax-ns#'}}}Description")
+    assert desc.get(f"{{{CRS}}}ColorNoiseReduction") == "35"

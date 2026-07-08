@@ -120,3 +120,9 @@ def test_contexto_incluye_nitidez_de_caras():
            [Face(0.4, 0.3, 0.1, 0.15, luma=0.5, sharpness=42.5)], 0.0)
     texto = client.messages.create.call_args.kwargs["messages"][0]["content"][1]["text"]
     assert '"nitidez": 42.5' in texto and '"nitidez_global"' in texto
+
+
+def test_prompt_pide_recortar_intrusos_y_sombras_decididas():
+    from revelado.ai import _SYSTEM
+    assert "ajeno" in _SYSTEM      # recorte de elementos ajenos en bordes
+    assert "sombras" in _SYSTEM.lower()

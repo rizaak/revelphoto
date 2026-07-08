@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 
 from revelado.ai import AIDecision
 from revelado.analysis.faces import Face
-from revelado.analysis.metrics import (GlobalMetrics, noise_reduction_for,
-                                       sharpening_for)
+from revelado.analysis.metrics import (GlobalMetrics, color_noise_for,
+                                       noise_reduction_for, sharpening_for)
 from revelado.config import SETTINGS
 
 MASK_EXPANSION = 1.6  # la elipse cubre 1.6x el recuadro de la cara
@@ -38,6 +38,7 @@ class DevelopSettings:
     crop_right: float
     crop_bottom: float
     crop_angle: float
+    color_noise: int = 25  # crs:ColorNoiseReduction; 25 es el defecto de Lightroom
     masks: list[RadialMask] = field(default_factory=list)
     ai_used: bool = False
     temp_shift: int = 0  # desviación aplicada respecto al WB de cámara (para la simulación)
@@ -129,6 +130,7 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
             whites=0, blacks=0,
             sharpness=sharpening_for(metrics.sharpness),
             luminance_smoothing=noise_reduction_for(metrics.iso),
+            color_noise=color_noise_for(metrics.iso),
             has_crop=has_crop,
             crop_left=crop[0], crop_top=crop[1],
             crop_right=crop[2], crop_bottom=crop[3],
@@ -155,6 +157,7 @@ def compute_settings(metrics: GlobalMetrics, faces: list[Face],
         highlights=highlights, shadows=shadows, whites=0, blacks=0,
         sharpness=sharpening_for(metrics.sharpness),
         luminance_smoothing=noise_reduction_for(metrics.iso),
+        color_noise=color_noise_for(metrics.iso),
         has_crop=rotation != 0.0,
         crop_left=0.0, crop_top=0.0, crop_right=1.0, crop_bottom=1.0,
         crop_angle=rotation,

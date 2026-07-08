@@ -142,3 +142,9 @@ def test_rate_false_desactiva_las_estrellas():
 def test_modo_local_sin_estrellas():
     s = compute_settings(METRICS, [], 0.0, ai=None)
     assert s.rating is None
+
+
+def test_color_noise_por_iso_en_ambos_modos():
+    con_ia = compute_settings(METRICS, [], 0.0, AI)        # ISO 3200
+    local = compute_settings(METRICS, [], 0.0, ai=None)
+    assert con_ia.color_noise == 35 and local.color_noise == 35

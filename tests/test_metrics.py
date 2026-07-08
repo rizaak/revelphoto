@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 
-from revelado.analysis.metrics import (GlobalMetrics, compute_metrics,
-                                       noise_reduction_for, sharpening_for)
+from revelado.analysis.metrics import (GlobalMetrics, color_noise_for,
+                                       compute_metrics, noise_reduction_for,
+                                       sharpening_for)
 
 
 def _flat(value, shape=(100, 100, 3)):
@@ -48,3 +49,9 @@ def test_sharpening_and_nr_ranges():
     assert noise_reduction_for(100) == 0
     assert noise_reduction_for(3200) > 0
     assert noise_reduction_for(25600) <= 40
+
+
+def test_color_noise_por_iso():
+    assert color_noise_for(100) == 25   # el valor por defecto de Lightroom
+    assert color_noise_for(3200) == 35
+    assert color_noise_for(12800) == 50
