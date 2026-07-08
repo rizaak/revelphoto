@@ -9,8 +9,15 @@ fino en Lightroom, partiendo del 90% hecho.
 ## Qué hace
 
 - **Análisis con IA por foto** (modelo Claude Haiku): exposición, contraste,
-  altas luces/sombras, encuadre y enderezado (solo con referencia clara), y
-  color como desviación relativa respecto al balance de blancos de tu cámara.
+  altas luces/sombras (con rescate decidido del sujeto cuando la escena lo
+  pide), encuadre y enderezado (solo con referencia clara), y color como
+  desviación relativa respecto al balance de blancos de tu cámara. El recorte
+  también deja fuera elementos que se cuelan por los bordes (un brazo ajeno,
+  un cono, un cartel) sin sacrificar al sujeto.
+- **Reducción de ruido según el ISO** de cada foto (luminancia y color), con
+  los mismos deslizadores del panel *Detalle* de Lightroom. Funciona incluso
+  sin IA. Borrar objetos DENTRO de la escena sí requiere píxeles: hazlo en
+  Lightroom con la herramienta *Eliminar* (Revelado nunca modifica tus RAW).
 - **Máscaras radiales por rostro decididas por la IA** (contraluz, lado en
   sombra, cara quemada) — editables en el panel de mascarado de Lightroom.
   Red de seguridad: una cara muy oscura siempre se rescata.
