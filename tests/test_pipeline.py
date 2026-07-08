@@ -70,3 +70,11 @@ def test_overwrite_replaces(tmp_path):
 def test_preview_error_is_error(tmp_path):
     result, _ = _run(tmp_path, extract_preview_jpeg=MagicMock(side_effect=PreviewError("sin preview")))
     assert result.status == "error" and "preview" in result.message.lower()
+
+
+def test_fallo_transitorio_de_ia_se_reintenta(tmp_path):
+    voluble = MagicMock(side_effect=[AIUnavailable("json inválido"), AI])
+    result, _ = _run(tmp_path, decide=voluble)
+    assert result.status == "done"
+    assert voluble.call_count == 2
+    assert result.settings.ai_used  # el reintento salvó la foto

@@ -54,12 +54,15 @@ def analyze_photo(raw_path: Path, overwrite: bool, client,
 
         ai = None
         if client is not None:
-            try:
-                ai = decide(client, encode_jpeg(img), metrics, faces, rotation,
-                            as_shot_temp=exif.color_temp,
-                            session_prompt=session_prompt)
-            except AIUnavailable as exc:
-                log.warning("API no disponible para %s: %s", raw_path.name, exc)
+            for intento in (1, 2):  # un reintento salva los fallos transitorios
+                try:
+                    ai = decide(client, encode_jpeg(img), metrics, faces, rotation,
+                                as_shot_temp=exif.color_temp,
+                                session_prompt=session_prompt)
+                    break
+                except AIUnavailable as exc:
+                    if intento == 2:
+                        log.warning("API no disponible para %s: %s", raw_path.name, exc)
 
         return PhotoAnalysis(raw_path, exif=exif, metrics=metrics, faces=faces,
                              rotation=rotation, ai=ai)

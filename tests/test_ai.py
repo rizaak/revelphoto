@@ -126,3 +126,9 @@ def test_prompt_pide_recortar_intrusos_y_sombras_decididas():
     from revelado.ai import _SYSTEM
     assert "ajeno" in _SYSTEM      # recorte de elementos ajenos en bordes
     assert "sombras" in _SYSTEM.lower()
+
+
+def test_prompt_confia_en_la_estimacion_local_de_enderezado():
+    from revelado.ai import _SYSTEM
+    assert "rotacion_estimada_grados" in _SYSTEM
+    assert "confírmala" in _SYSTEM
