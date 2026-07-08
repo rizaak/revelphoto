@@ -2,8 +2,9 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from revelado.ai import AIDecision, AIUnavailable, decide
-from revelado.analysis.faces import Face, detect_faces
+from revelado.ai import (AIDecision, AIUnavailable, assess_faces,
+                         cap_rating_for_faces, decide)
+from revelado.analysis.faces import Face, detect_faces, face_crop_jpegs
 from revelado.analysis.horizon import estimate_rotation
 from revelado.analysis.metrics import GlobalMetrics, compute_metrics
 from revelado.config import SETTINGS
@@ -63,6 +64,13 @@ def analyze_photo(raw_path: Path, overwrite: bool, client,
                 except AIUnavailable as exc:
                     if intento == 2:
                         log.warning("API no disponible para %s: %s", raw_path.name, exc)
+            if ai is not None and faces:
+                # Culling de caras en llamada aparte y enfocada (ver ai.assess_faces).
+                # Recortes desde alta resolución: en la vista previa reducida el
+                # veredicto es inestable (verificado con fotos reales).
+                big = decode_upright(jpeg, exif.orientation, SETTINGS.cull_long_edge)
+                estados = assess_faces(client, face_crop_jpegs(big, faces))
+                ai = cap_rating_for_faces(ai, estados, faces)
 
         return PhotoAnalysis(raw_path, exif=exif, metrics=metrics, faces=faces,
                              rotation=rotation, ai=ai)

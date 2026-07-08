@@ -78,3 +78,20 @@ def test_fallo_transitorio_de_ia_se_reintenta(tmp_path):
     assert result.status == "done"
     assert voluble.call_count == 2
     assert result.settings.ai_used  # el reintento salvó la foto
+
+
+def test_cara_mala_limita_la_puntuacion(tmp_path):
+    from revelado.analysis.faces import Face
+    cara = Face(0.4, 0.3, 0.1, 0.1, luma=0.5, sharpness=100.0)
+    result, _ = _run(tmp_path,
+                     detect_faces=MagicMock(return_value=[cara]),
+                     assess_faces=MagicMock(return_value=["movida"]))
+    assert result.status == "done"
+    assert result.settings.rating == 2
+    assert result.settings.rating_reason == "cara movida"
+
+
+def test_sin_caras_no_se_llama_al_culling(tmp_path):
+    veedor = MagicMock(return_value=[])
+    _run(tmp_path, assess_faces=veedor)
+    veedor.assert_not_called()

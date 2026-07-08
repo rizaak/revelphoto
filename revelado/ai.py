@@ -92,13 +92,11 @@ _SYSTEM = (
     "si está quemado. Se aplicará como máscara radial SOLO sobre esa cara, sin tocar "
     "el resto de la imagen. Si ningún rostro lo necesita, devuelve [].\n"
     "Puntuación (rating, 1-5): valora la foto como lo haría el fotógrafo al "
-    "seleccionar: 5 excepcional (nítida donde importa, expresión y momento "
-    "excelentes), 4 buena, 3 correcta, 2 con un problema claro (ojos cerrados, "
-    "sujeto desenfocado, expresión desafortunada), 1 fallida. Cada cara trae su "
-    "nitidez medida (varianza del laplaciano: compárala entre caras y con la "
-    "nitidez global; un valor muy inferior sugiere sujeto desenfocado). En caso "
-    "de duda, 3. rating_reason: el motivo en español en 8 palabras o menos, o "
-    "cadena vacía si no hay nada que señalar."
+    "seleccionar: 5 excepcional (expresión y momento excelentes), 4 buena, 3 "
+    "correcta, 2 con un problema claro (expresión desafortunada, composición "
+    "fallida), 1 fallida. La nitidez de las caras se revisa aparte: no la "
+    "juzgues tú. En caso de duda, 3. rating_reason: el motivo en español en 8 "
+    "palabras o menos, o cadena vacía si no hay nada que señalar."
 )
 
 
@@ -173,6 +171,90 @@ def decide(client, preview_jpeg: bytes, metrics: GlobalMetrics,
         raise
     except Exception as exc:  # red, parseo, formato: todo degrada a modo local
         raise AIUnavailable(str(exc)) from exc
+
+
+_FACE_STATES = ("nítida", "movida", "desenfocada", "ojos_cerrados", "tapada")
+_ASSESS_SCHEMA = {
+    "type": "object",
+    "properties": {"caras": {"type": "array", "items": {
+        "type": "object",
+        "properties": {"estado": {"type": "string", "enum": list(_FACE_STATES)}},
+        "required": ["estado"], "additionalProperties": False,
+    }}},
+    "required": ["caras"], "additionalProperties": False,
+}
+
+_ASSESS_SYSTEM = (
+    "Eres un fotógrafo profesional haciendo culling (selección). Recibes "
+    "recortes ampliados de las caras de UNA misma foto, en orden. Para cada "
+    "recorte decide su estado: 'nítida' (rasgos definidos, sin defecto claro), "
+    "'movida' (rastro de movimiento, contornos dobles), 'desenfocada' (fuera "
+    "de foco), 'ojos_cerrados' (SOLO si el párpado se ve claramente cerrado; "
+    "entrecerrar al sonreír no cuenta), o 'tapada' (manos u objetos cubriendo "
+    "la cara). Ante la duda entre defecto y no defecto: 'nítida'. Devuelve JSON."
+)
+
+# La puntuación de nitidez/ojos va en una llamada APARTE y enfocada: dentro
+# de la llamada de revelado el modelo la ignora (verificado con fotos reales).
+_CAP_REASON = {"movida": "cara movida", "desenfocada": "cara desenfocada",
+               "ojos_cerrados": "ojos cerrados", "tapada": "cara tapada"}
+
+
+def assess_faces(client, face_crops: list[bytes]) -> list[str]:
+    """Estado de cada cara según la IA; [] si no hay recortes o si falla.
+
+    Degrada en silencio: sin veredicto no se toca la puntuación (mejor una
+    foto mal puntuada que un lote caído por el culling).
+    """
+    if not face_crops:
+        return []
+    try:
+        response = client.messages.create(
+            model=SETTINGS.model,
+            max_tokens=300,
+            system=_ASSESS_SYSTEM,
+            messages=[{"role": "user", "content": [
+                *({"type": "image", "source": {
+                    "type": "base64", "media_type": "image/jpeg",
+                    "data": base64.standard_b64encode(c).decode()}}
+                  for c in face_crops),
+                {"type": "text",
+                 "text": f"Evalúa las {len(face_crops)} caras, en orden."},
+            ]}],
+            output_config={"format": {"type": "json_schema", "schema": _ASSESS_SCHEMA}},
+        )
+        if response.stop_reason == "refusal":
+            return []
+        text = next(b.text for b in response.content if b.type == "text")
+        estados = [c["estado"] for c in json.loads(text)["caras"]]
+        return estados if all(e in _FACE_STATES for e in estados) else []
+    except Exception:
+        return []
+
+
+def cap_rating_for_faces(d: AIDecision, estados: list[str],
+                         faces: list[Face]) -> AIDecision:
+    """Tope determinista: una cara mal => máx 2 estrellas; todas mal => 1.
+
+    'ojos_cerrados' solo cuenta en caras frontales: en perfiles el modelo
+    confunde un ojo abierto mirando de lado con un párpado cerrado
+    (verificado con fotos reales), y un perfil con ojos cerrados suele ser
+    intencional (un beso). Los demás defectos cuentan siempre.
+    """
+    malas = []
+    for i, e in enumerate(estados):
+        if e == "nítida":
+            continue
+        if e == "ojos_cerrados" and i < len(faces) and not faces[i].frontal:
+            continue
+        malas.append(e)
+    if not malas:
+        return d
+    # ponytail: "tapada" cuenta como defecto; un cucú intencional se rescata a mano
+    cap = 1 if len(malas) == len(estados) and len(estados) > 1 else 2
+    if d.rating <= cap:
+        return d
+    return replace(d, rating=cap, rating_reason=_CAP_REASON[malas[0]])
 
 
 def clamp_decision(d: AIDecision) -> AIDecision:

@@ -25,6 +25,7 @@ class Settings:
     port: int = 8420
     model: str = "claude-haiku-4-5"
     preview_long_edge: int = 1500
+    cull_long_edge: int = 3600   # resolución de los recortes de cara para el culling
     thumb_long_edge: int = 400
     face_lum_threshold: float = 0.35
     face_lum_target: float = 0.50

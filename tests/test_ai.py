@@ -132,3 +132,57 @@ def test_prompt_confia_en_la_estimacion_local_de_enderezado():
     from revelado.ai import _SYSTEM
     assert "rotacion_estimada_grados" in _SYSTEM
     assert "confírmala" in _SYSTEM
+
+
+def test_assess_faces_devuelve_estados_en_orden():
+    from revelado.ai import assess_faces
+    client = _client_returning('{"caras": [{"estado": "movida"}, {"estado": "nítida"}]}')
+    estados = assess_faces(client, [b"\xff\xd8a", b"\xff\xd8b"])
+    assert estados == ["movida", "nítida"]
+    content = client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert sum(1 for b in content if b["type"] == "image") == 2
+
+
+def test_assess_faces_sin_recortes_no_llama():
+    from revelado.ai import assess_faces
+    client = MagicMock()
+    assert assess_faces(client, []) == []
+    client.messages.create.assert_not_called()
+
+
+def test_assess_faces_degrada_sin_romper():
+    from revelado.ai import assess_faces
+    assert assess_faces(_client_returning("no es json"), [b"\xff\xd8"]) == []
+
+
+def _decision4():
+    return clamp_decision(AIDecision(crop=None, angle=0.0, exposure=0.0, contrast=0,
+                                     highlights=0, shadows=0, temp_shift=0,
+                                     tint_shift=0, rating=4))
+
+
+def _cara(frontal=True):
+    return Face(0.4, 0.3, 0.1, 0.1, luma=0.5, frontal=frontal)
+
+
+def test_cap_rating_por_estados():
+    from revelado.ai import cap_rating_for_faces
+    d = _decision4()
+    una_mala = cap_rating_for_faces(d, ["nítida", "ojos_cerrados"], [_cara(), _cara()])
+    assert una_mala.rating == 2 and una_mala.rating_reason == "ojos cerrados"
+    todas_malas = cap_rating_for_faces(d, ["movida", "tapada"], [_cara(), _cara()])
+    assert todas_malas.rating == 1 and todas_malas.rating_reason == "cara movida"
+    sanas = cap_rating_for_faces(d, ["nítida", "nítida"], [_cara(), _cara()])
+    assert sanas.rating == 4
+    assert cap_rating_for_faces(d, [], []).rating == 4
+
+
+def test_ojos_cerrados_solo_cuenta_en_caras_frontales():
+    from revelado.ai import cap_rating_for_faces
+    d = _decision4()
+    perfil = cap_rating_for_faces(d, ["ojos_cerrados"], [_cara(frontal=False)])
+    assert perfil.rating == 4  # de perfil el veredicto de ojos no es fiable
+    frontal = cap_rating_for_faces(d, ["ojos_cerrados"], [_cara(frontal=True)])
+    assert frontal.rating == 2
+    movida_perfil = cap_rating_for_faces(d, ["movida"], [_cara(frontal=False)])
+    assert movida_perfil.rating == 2  # la movida sí cuenta aunque sea perfil
