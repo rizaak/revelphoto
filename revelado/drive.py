@@ -3,7 +3,6 @@ import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import set
 
 
 def _ensure_synced(file_path: Path, timeout: int = 30) -> bool:
