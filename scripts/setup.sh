@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Con doble clic el PATH no trae Homebrew ni python.org; ampliarlo aquí
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
-if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)'; then
-  echo "Se necesita Python 3.10 o superior"; exit 1
-fi
+PY="$(bash scripts/find-python.sh)" || {
+  echo "Se necesita Python 3.10 o superior (instálalo desde python.org)"; exit 1; }
+echo "Usando Python: $PY ($("$PY" -V))"
 
 if ! command -v exiftool >/dev/null; then
   echo "Instalando exiftool con Homebrew..."
   brew install exiftool
 fi
 
-if [ ! -d .venv ]; then python3 -m venv .venv; fi
+if [ ! -d .venv ]; then "$PY" -m venv .venv; fi
 ./.venv/bin/pip install -q -r requirements.txt
 
 mkdir -p models

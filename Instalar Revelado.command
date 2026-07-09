@@ -1,14 +1,18 @@
 #!/bin/bash
 # Instalador de Revelado — doble clic en el Finder.
 cd "$(dirname "$0")"
+# Con doble clic el PATH no trae Homebrew ni python.org; ampliarlo aquí
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 echo "════════════════════════════════════"
 echo "   Instalador de Revelado (v1)"
 echo "════════════════════════════════════"
 
-if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
+if ! PY="$(bash scripts/find-python.sh)"; then
   echo "❌ Se necesita Python 3.10 o superior. Instálalo desde python.org y vuelve a ejecutar."
   read -p "Enter para cerrar…"; exit 1
 fi
+export REVELADO_PYTHON="$PY"
+echo "Python encontrado: $PY ($("$PY" -V))"
 
 if ! command -v exiftool >/dev/null; then
   if command -v brew >/dev/null; then
