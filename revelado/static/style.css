@@ -47,7 +47,13 @@ button:disabled { opacity: .4; cursor: default; }
 .review-card .actions button { font-size: .8rem; padding: .3rem .7rem; }
 .review-card.discarded { opacity: .45; }
 #lrcat { margin-bottom: 1rem; }
-.lr-title { color: #9aa0aa; font-size: .85rem; margin-bottom: .4rem; }
+.lr-header { display: flex; justify-content: space-between; align-items: center;
+             margin-bottom: .4rem; }
+.lr-title { color: #9aa0aa; font-size: .85rem; }
+#lr-toggle { padding: .2rem .5rem; font-size: .9rem; min-width: 2rem; }
+#lr-search { background: #2a2e37; color: #e8e8e8; border: 1px solid #3a3f4a;
+             border-radius: 8px; padding: .4rem .6rem; width: 100%; margin-bottom: .4rem;
+             font: inherit; }
 #lr-sources { list-style: none; border: 1px solid #2a2e37; border-radius: 8px; }
 #lr-sources li { padding: .55rem .8rem; border-bottom: 1px solid #2a2e37; cursor: pointer;
                  display: flex; justify-content: space-between; }

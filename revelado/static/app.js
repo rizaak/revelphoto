@@ -44,12 +44,42 @@ async function loadLrcat() {
     const { folders, collections } = await api(
       `/api/lrcat/sources?cat=${encodeURIComponent(cat.path)}`);
     if (!folders.length && !collections.length) return;
+
+    const header = document.createElement("div");
+    header.className = "lr-header";
     const title = document.createElement("div");
     title.className = "lr-title";
     title.textContent = `📔 Catálogo de Lightroom (${cat.name})`;
-    box.appendChild(title);
+    const toggle = document.createElement("button");
+    toggle.id = "lr-toggle";
+    toggle.textContent = "☰";
+    toggle.title = "Mostrar/ocultar catálogo";
+    toggle.onclick = (e) => {
+      e.stopPropagation();
+      const isHidden = ul.style.display === "none";
+      ul.style.display = isHidden ? "" : "none";
+      search.style.display = isHidden ? "" : "none";
+      toggle.textContent = isHidden ? "☰" : "▸";
+    };
+    header.appendChild(title);
+    header.appendChild(toggle);
+    box.appendChild(header);
+
     const ul = document.createElement("ul");
     ul.id = "lr-sources";
+
+    const search = document.createElement("input");
+    search.type = "text";
+    search.id = "lr-search";
+    search.placeholder = "Buscar carpeta/colección…";
+    search.oninput = () => {
+      const q = search.value.toLowerCase();
+      for (const li of ul.querySelectorAll("li")) {
+        const name = li.querySelector("span").textContent.toLowerCase();
+        li.style.display = q && !name.includes(q) ? "none" : "flex";
+      }
+    };
+    box.appendChild(search);
     for (const f of folders) {
       const li = document.createElement("li");
       li.innerHTML = `<span>📁 ${f.name}</span><span class="raw-count">${f.count} RAW</span>`;
