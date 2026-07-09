@@ -9,6 +9,7 @@ from revelado.analysis.horizon import estimate_rotation
 from revelado.analysis.metrics import GlobalMetrics, compute_metrics
 from revelado.config import SETTINGS
 from revelado.develop import DevelopSettings, compute_settings
+from revelado.drive import ensure_local
 from revelado.exif import ExifData, extract_preview_jpeg, read_exif
 from revelado.imageio import decode_upright, encode_jpeg
 from revelado.xmp import SidecarExists, sidecar_path, write_sidecar
@@ -46,6 +47,7 @@ def analyze_photo(raw_path: Path, overwrite: bool, client,
         if sidecar_path(raw_path).exists() and not overwrite:
             return PhotoAnalysis(raw_path, skipped=True)
 
+        ensure_local(raw_path)
         exif = read_exif(raw_path)
         jpeg = extract_preview_jpeg(raw_path)
         img = decode_upright(jpeg, exif.orientation, SETTINGS.preview_long_edge)

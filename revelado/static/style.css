@@ -13,9 +13,14 @@ button:disabled { opacity: .4; cursor: default; }
            margin-bottom: 1rem; }
 #crumb { color: #9aa0aa; margin-bottom: .6rem; font-size: .85rem; }
 #dirs { list-style: none; }
-#dirs li { padding: .55rem .8rem; border-bottom: 1px solid #2a2e37; cursor: pointer;
-           display: flex; justify-content: space-between; }
+#dirs li { padding: 0; border-bottom: 1px solid #2a2e37;
+           display: flex; align-items: center; justify-content: space-between; }
 #dirs li:hover { background: #22252c; }
+.dir-item { flex: 1; }
+.dir-info { padding: .55rem .8rem; cursor: pointer; flex: 1; display: flex;
+            justify-content: space-between; align-items: center; }
+.process-btn { font-size: .75rem; padding: .3rem .6rem; margin-right: .6rem;
+               background: #3b6ef5; border-color: #3b6ef5; }
 .raw-count { color: #7fb069; font-size: .85rem; }
 #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: .7rem; }

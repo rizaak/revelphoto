@@ -24,9 +24,20 @@ async function loadDirs(path = "") {
   ul.appendChild(up);
   for (const d of data.dirs) {
     const li = document.createElement("li");
-    li.innerHTML = `<span>📁 ${d.name}</span>` +
+    li.className = "dir-item";
+    const info = document.createElement("div");
+    info.className = "dir-info";
+    info.innerHTML = `<span>📁 ${d.name}</span>` +
       (d.raw_count ? `<span class="raw-count">${d.raw_count} RAW</span>` : "");
-    li.onclick = () => d.raw_count ? openGallery(d.path) : loadDirs(d.path);
+    info.onclick = () => loadDirs(d.path);
+    li.appendChild(info);
+    if (d.raw_count) {
+      const btn = document.createElement("button");
+      btn.className = "process-btn";
+      btn.textContent = "Procesar";
+      btn.onclick = (e) => { e.stopPropagation(); openGallery(d.path); };
+      li.appendChild(btn);
+    }
     ul.appendChild(li);
   }
   show("browser");
