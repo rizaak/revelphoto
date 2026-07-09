@@ -7,10 +7,7 @@ echo "════════════════════════�
 echo "   Instalador de Revelado (v1)"
 echo "════════════════════════════════════"
 
-if ! PY="$(bash scripts/find-python.sh)"; then
-  echo "❌ Se necesita Python 3.10 o superior. Instálalo desde python.org y vuelve a ejecutar."
-  read -p "Enter para cerrar…"; exit 1
-fi
+
 export REVELADO_PYTHON="$PY"
 echo "Python encontrado: $PY ($("$PY" -V))"
 
