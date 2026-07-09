@@ -9,6 +9,7 @@ _ok() { "$1" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' 
 CANDIDATOS=(
   "${REVELADO_PYTHON:-}"
   "$(command -v python3 2>/dev/null || true)"
+  "${HOME}/.pyenv/shims/python3"
 )
 # Instalaciones de python.org (la más nueva primero) y Homebrew
 while IFS= read -r p; do CANDIDATOS+=("$p"); done < <(

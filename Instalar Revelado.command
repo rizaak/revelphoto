@@ -7,8 +7,8 @@ echo "════════════════════════�
 echo "   Instalador de Revelado (v1)"
 echo "════════════════════════════════════"
 
-
-export REVELADO_PYTHON="$PY"
+PY="$(bash scripts/find-python.sh)" || {
+  echo "Se necesita Python 3.10 o superior (instálalo desde python.org)"; exit 1; }
 echo "Python encontrado: $PY ($("$PY" -V))"
 
 if ! command -v exiftool >/dev/null; then
