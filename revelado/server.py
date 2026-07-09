@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import anthropic
@@ -99,20 +100,25 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
         if not base.is_dir():
             raise HTTPException(404, "Carpeta no encontrada")
         dirs = []
-        for child in sorted(base.iterdir()):
-            if child.is_dir() and not child.name.startswith("."):
-                if os.access(child, os.R_OK):
-                    # Contar RAW locales
-                    count = sum(1 for f in child.iterdir()
-                                if f.suffix.lower() in SETTINGS.raw_extensions)
-                    # Agregar RAW de Google Drive sin sincronizar
-                    drive_files = list_drive_files(child)
-                    count += sum(1 for f in drive_files
-                                if Path(f).suffix.lower() in SETTINGS.raw_extensions)
-                else:
-                    count = 0
+        children = [c for c in sorted(base.iterdir())
+                    if c.is_dir() and not c.name.startswith(".") and os.access(c, os.R_OK)]
+
+        def count_raws(child):
+            local = sum(1 for f in child.iterdir()
+                       if f.suffix.lower() in SETTINGS.raw_extensions)
+            drive = sum(1 for f in list_drive_files(child)
+                       if Path(f).suffix.lower() in SETTINGS.raw_extensions)
+            return child, local + drive
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            for child, count in executor.map(count_raws, children):
                 dirs.append({"name": child.name, "path": str(child),
-                             "raw_count": count})
+                            "raw_count": count})
+
+        for child in [c for c in sorted(base.iterdir())
+                      if c.is_dir() and not c.name.startswith(".") and not os.access(c, os.R_OK)]:
+            dirs.append({"name": child.name, "path": str(child), "raw_count": 0})
+
         return {"path": str(base), "parent": str(base.parent), "dirs": dirs}
 
     @app.get("/api/photos")

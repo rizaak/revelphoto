@@ -14,11 +14,14 @@ async function api(path, opts) {
 
 // --- Pantalla 1: carpetas ---
 async function loadDirs(path = "") {
-  const data = await api(`/api/browse?path=${encodeURIComponent(path)}`);
-  $("crumb").textContent = data.path;
-  const ul = $("dirs");
-  ul.innerHTML = "";
-  const up = document.createElement("li");
+  $("loading").hidden = false;
+  $("dirs").innerHTML = "";
+  try {
+    const data = await api(`/api/browse?path=${encodeURIComponent(path)}`);
+    $("crumb").textContent = data.path;
+    const ul = $("dirs");
+    ul.innerHTML = "";
+    const up = document.createElement("li");
   up.textContent = "⬆︎ Subir";
   up.onclick = () => loadDirs(data.parent || "");
   ul.appendChild(up);
@@ -40,8 +43,11 @@ async function loadDirs(path = "") {
     }
     ul.appendChild(li);
   }
-  show("browser");
-  $("subtitle").textContent = "Selecciona una carpeta o una fuente del catálogo de Lightroom";
+    show("browser");
+    $("subtitle").textContent = "Selecciona una carpeta o una fuente del catálogo de Lightroom";
+  } finally {
+    $("loading").hidden = true;
+  }
 }
 
 // --- Catálogo de Lightroom (solo lectura) ---
@@ -150,10 +156,15 @@ function renderGallery(photos, subtitle) {
 }
 
 async function openGallery(dir) {
-  state.dir = dir;
-  const data = await api(`/api/photos?dir=${encodeURIComponent(dir)}`);
-  state.reloadGallery = () => openGallery(dir);
-  renderGallery(data.photos, dir);
+  $("loading").hidden = false;
+  try {
+    state.dir = dir;
+    const data = await api(`/api/photos?dir=${encodeURIComponent(dir)}`);
+    state.reloadGallery = () => openGallery(dir);
+    renderGallery(data.photos, dir);
+  } finally {
+    $("loading").hidden = true;
+  }
 }
 
 $("remove-xmp").onclick = async () => {

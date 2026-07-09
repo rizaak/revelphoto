@@ -1,6 +1,7 @@
 """Sincronización automática de Google Drive antes de procesar."""
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import set
 
