@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from revelado.ai import AIUnavailable
 from revelado.config import SETTINGS
 from revelado.cull import flag_blurry, rank_bursts
+from revelado.drive import list_drive_files
 from revelado.exif import extract_preview_jpeg, read_exif
 from revelado.learn import apply_learned_style, collect_stats, summarize_style
 from revelado.imageio import decode_upright, encode_jpeg
@@ -100,9 +101,16 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
         dirs = []
         for child in sorted(base.iterdir()):
             if child.is_dir() and not child.name.startswith("."):
-                count = sum(1 for f in child.iterdir()
-                            if f.suffix.lower() in SETTINGS.raw_extensions) \
-                        if os.access(child, os.R_OK) else 0
+                if os.access(child, os.R_OK):
+                    # Contar RAW locales
+                    count = sum(1 for f in child.iterdir()
+                                if f.suffix.lower() in SETTINGS.raw_extensions)
+                    # Agregar RAW de Google Drive sin sincronizar
+                    drive_files = list_drive_files(child)
+                    count += sum(1 for f in drive_files
+                                if Path(f).suffix.lower() in SETTINGS.raw_extensions)
+                else:
+                    count = 0
                 dirs.append({"name": child.name, "path": str(child),
                              "raw_count": count})
         return {"path": str(base), "parent": str(base.parent), "dirs": dirs}
@@ -112,8 +120,17 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
         base = Path(dir).expanduser()
         if not base.is_dir():
             raise HTTPException(404, "Carpeta no encontrada")
-        items = sorted(f for f in base.iterdir()
-                       if f.suffix.lower() in SETTINGS.raw_extensions)
+        # Listar RAW locales
+        items = set(f for f in base.iterdir()
+                    if f.suffix.lower() in SETTINGS.raw_extensions)
+        # Agregar RAW de Google Drive sin sincronizar
+        drive_files = list_drive_files(base)
+        for fname in drive_files:
+            if Path(fname).suffix.lower() in SETTINGS.raw_extensions:
+                fpath = base / fname
+                items.add(fpath)
+        # Ordenar por nombre
+        items = sorted(items, key=lambda f: f.name)
         return {"photos": [{"name": f.name, "path": str(f),
                             "has_xmp": sidecar_path(f).exists()} for f in items]}
 

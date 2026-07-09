@@ -2,6 +2,7 @@
 import subprocess
 import time
 from pathlib import Path
+from typing import set
 
 
 def _ensure_synced(file_path: Path, timeout: int = 30) -> bool:
@@ -51,3 +52,28 @@ def ensure_local(file_path: Path) -> None:
             "(probablemente está en Google Drive sin sincronizar). "
             "Abre el archivo en el Finder para sincronizarlo automáticamente."
         )
+
+
+def list_drive_files(directory: Path) -> set[str]:
+    """List files in a Google Drive folder (including not-yet-synced files).
+
+    Uses brctl (Google Drive CLI) to discover files that may not exist locally.
+    Returns set of filenames visible in Drive, even if not synced.
+    """
+    if not directory.exists():
+        return set()
+
+    try:
+        result = subprocess.run(
+            ["brctl", "ls", str(directory)],
+            capture_output=True,
+            timeout=5,
+            text=True
+        )
+        if result.returncode == 0:
+            # brctl ls outputs one filename per line
+            return set(line.strip() for line in result.stdout.splitlines() if line.strip())
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    return set()
