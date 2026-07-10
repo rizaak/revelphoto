@@ -23,7 +23,8 @@ load_env_file()
 @dataclass(frozen=True)
 class Settings:
     port: int = 8420
-    model: str = "claude-haiku-4-5"
+    ai_provider: str = os.getenv("AI_PROVIDER", "anthropic")  # anthropic, google
+    model: str = os.getenv("AI_MODEL", "claude-haiku-4-5")
     preview_long_edge: int = 1500
     cull_long_edge: int = 3600   # resolución de los recortes de cara para el culling
     thumb_long_edge: int = 400

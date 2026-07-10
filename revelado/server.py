@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from revelado.ai import AIUnavailable
+from revelado.ai_client import get_ai_client
 from revelado.config import SETTINGS
 
 VERSION = "2.0.0-dev"
@@ -36,10 +37,7 @@ _STATIC = Path(__file__).parent / "static"
 
 
 def _default_client_factory():
-    try:
-        return anthropic.Anthropic()
-    except Exception:
-        return None
+    return get_ai_client()
 
 
 class XmpDeleteRequest(BaseModel):
