@@ -34,11 +34,46 @@ async function loadDirs(path = "") {
       (d.raw_count ? `<span class="raw-count">${d.raw_count} RAW</span>` : "");
     info.onclick = () => loadDirs(d.path);
     li.appendChild(info);
+    if (d.has_xmp) {
+      const learnBtn = document.createElement("button");
+      learnBtn.className = "learn-btn";
+      learnBtn.textContent = "🎓 Aprender";
+      learnBtn.title = "Aprender el estilo de esta carpeta";
+      learnBtn.onclick = (e) => { e.stopPropagation(); learnStyle(d.path, learnBtn); };
+      li.appendChild(learnBtn);
+    }
     if (d.raw_count) {
       const btn = document.createElement("button");
       btn.className = "process-btn";
       btn.textContent = "Procesar";
       btn.onclick = (e) => { e.stopPropagation(); openGallery(d.path); };
+      li.appendChild(btn);
+    }
+    ul.appendChild(li);
+  }
+  // Si no hay subcarpetas pero la carpeta actual tiene RAW o XMP, mostrar opciones
+  if (!data.dirs.length && (data.current_raw_count || data.current_has_xmp)) {
+    const li = document.createElement("li");
+    li.className = "dir-item current-dir";
+    const info = document.createElement("div");
+    info.className = "dir-info";
+    let infoHtml = `<span>📁 Esta carpeta</span>`;
+    if (data.current_raw_count) infoHtml += `<span class="raw-count">${data.current_raw_count} RAW</span>`;
+    info.innerHTML = infoHtml;
+    li.appendChild(info);
+    if (data.current_has_xmp) {
+      const learnBtn = document.createElement("button");
+      learnBtn.className = "learn-btn";
+      learnBtn.textContent = "🎓 Aprender";
+      learnBtn.title = "Aprender el estilo de esta carpeta";
+      learnBtn.onclick = () => learnStyle(data.path, learnBtn);
+      li.appendChild(learnBtn);
+    }
+    if (data.current_raw_count) {
+      const btn = document.createElement("button");
+      btn.className = "process-btn";
+      btn.textContent = "Procesar";
+      btn.onclick = () => openGallery(data.path);
       li.appendChild(btn);
     }
     ul.appendChild(li);
@@ -180,27 +215,30 @@ $("remove-xmp").onclick = async () => {
   if (state.reloadGallery) state.reloadGallery();
 };
 
-$("learn-style").onclick = async () => {
-  if (!state.dir) return;
+async function learnStyle(dir, btn) {
   if (!confirm("Voy a leer los XMP de esta carpeta (ediciones hechas por TI en Lightroom) " +
                "para aprender tu estilo y guardarlo en estilo.txt. ¿Continuar?")) return;
-  const b = $("learn-style");
-  b.disabled = true;
-  b.textContent = "Aprendiendo…";
+  if (btn) btn.disabled = true;
+  const origText = btn ? btn.textContent : "";
+  if (btn) btn.textContent = "Aprendiendo…";
   try {
     const { count, summary } = await api("/api/style/learn", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dir: state.dir }),
+      body: JSON.stringify({ dir }),
     });
     alert(`Estilo aprendido de ${count} fotos y guardado en estilo.txt ` +
           `(puedes editarlo o borrarlo cuando quieras):\n\n${summary}`);
   } catch (e) {
     alert(`No se pudo aprender el estilo: ${e.message}`);
   }
-  b.disabled = false;
-  b.textContent = "🎓 Aprender mi estilo";
-};
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+}
+
+$("learn-style").onclick = () => learnStyle(state.dir, $("learn-style"));
 
 $("back").onclick = () => loadDirs(state.dir ? state.dir.split("/").slice(0, -1).join("/") : "");
 $("select-all").onclick = () => {

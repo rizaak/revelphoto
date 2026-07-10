@@ -21,6 +21,8 @@ button:disabled { opacity: .4; cursor: default; }
             justify-content: space-between; align-items: center; }
 .process-btn { font-size: .75rem; padding: .3rem .6rem; margin-right: .6rem;
                background: #3b6ef5; border-color: #3b6ef5; }
+.learn-btn { font-size: .75rem; padding: .3rem .6rem; margin-right: .6rem;
+             background: #6b4e9c; border-color: #6b4e9c; }
 .raw-count { color: #7fb069; font-size: .85rem; }
 #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: .7rem; }

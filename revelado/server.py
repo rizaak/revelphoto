@@ -108,18 +108,29 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
                        if f.suffix.lower() in SETTINGS.raw_extensions)
             drive = sum(1 for f in list_drive_files(child)
                        if Path(f).suffix.lower() in SETTINGS.raw_extensions)
-            return child, local + drive
+            has_xmp = any(f.suffix.lower() == ".xmp" for f in child.iterdir())
+            return child, local + drive, has_xmp
 
         with ThreadPoolExecutor(max_workers=4) as executor:
-            for child, count in executor.map(count_raws, children):
+            for child, count, has_xmp in executor.map(count_raws, children):
                 dirs.append({"name": child.name, "path": str(child),
-                            "raw_count": count})
+                            "raw_count": count, "has_xmp": has_xmp})
 
         for child in [c for c in sorted(base.iterdir())
                       if c.is_dir() and not c.name.startswith(".") and not os.access(c, os.R_OK)]:
             dirs.append({"name": child.name, "path": str(child), "raw_count": 0})
 
-        return {"path": str(base), "parent": str(base.parent), "dirs": dirs}
+        # Contar RAW en la carpeta actual
+        current_raw_count = sum(1 for f in base.iterdir()
+                               if f.suffix.lower() in SETTINGS.raw_extensions)
+        current_raw_count += sum(1 for f in list_drive_files(base)
+                                if Path(f).suffix.lower() in SETTINGS.raw_extensions)
+
+        # Verificar si hay XMP en la carpeta actual
+        current_has_xmp = any(f.suffix.lower() == ".xmp" for f in base.iterdir())
+
+        return {"path": str(base), "parent": str(base.parent), "dirs": dirs,
+                "current_raw_count": current_raw_count, "current_has_xmp": current_has_xmp}
 
     @app.get("/api/photos")
     def photos(dir: str):
