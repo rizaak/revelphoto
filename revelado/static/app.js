@@ -185,7 +185,9 @@ function renderGallery(photos, subtitle) {
     grid.appendChild(div);
   }
   $("subtitle").textContent = subtitle;
-  $("learn-style").hidden = !state.dir;
+  $("learn-style").hidden = false;
+  $("learn-style").disabled = !state.dir;
+  $("learn-style").title = state.dir ? "Aprender el estilo de esta carpeta" : "Solo funciona con carpetas (no con catálogos de Lightroom)";
   updateToolbar();
   show("gallery");
 }
