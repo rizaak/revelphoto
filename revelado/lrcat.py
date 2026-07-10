@@ -112,3 +112,20 @@ def photos(cat: Path, source_type: str, source_id: int) -> list[Path]:
         return [Path(a + (p or "") + n) for a, p, n in rows]
     finally:
         con.close()
+
+
+def folder_path(cat: Path, folder_id: int) -> str | None:
+    """Ruta física absoluta de una carpeta del catálogo (solo folders, no collections)."""
+    con = _connect(cat)
+    try:
+        row = con.execute("""
+            SELECT r.absolutePath, f.pathFromRoot
+            FROM AgLibraryFolder f
+            JOIN AgLibraryRootFolder r ON f.rootFolder = r.id_local
+            WHERE f.id_local = ?""", (folder_id,)).fetchone()
+        if row:
+            abs_path, from_root = row
+            return abs_path + (from_root or "")
+        return None
+    finally:
+        con.close()

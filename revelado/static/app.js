@@ -159,7 +159,7 @@ async function loadLrcat() {
 
 async function openLrGallery(cat, type, id, subtitle) {
   const data = await api(`/api/lrcat/photos?cat=${encodeURIComponent(cat)}&type=${type}&id=${id}`);
-  state.dir = null;  // galería de catálogo: sin carpeta única (p. ej. para aprender estilo)
+  state.dir = data.folder || null;  // carpeta física si es tipo folder
   state.reloadGallery = () => openLrGallery(cat, type, id, subtitle);
   renderGallery(data.photos.filter((p) => !p.missing), subtitle);
 }

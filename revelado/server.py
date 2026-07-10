@@ -26,6 +26,7 @@ from revelado.harmonize import harmonize
 from revelado.lrcat import CatalogLocked, find_catalogs
 from revelado.lrcat import photos as lrcat_photos
 from revelado.lrcat import sources as lrcat_sources
+from revelado.lrcat import folder_path as lrcat_folder_path
 from revelado.pipeline import analyze_photo, finalize_photo
 from revelado.presets import delete_preset, list_presets, save_preset
 from revelado.simulate import simulate
@@ -204,9 +205,11 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
             paths = lrcat_photos(Path(cat), type, id)
         except CatalogLocked:
             raise HTTPException(423, "El catálogo está bloqueado por Lightroom; ciérralo e inténtalo de nuevo")
+        folder = lrcat_folder_path(Path(cat), id) if type == "folder" else None
         return {"photos": [{"name": p.name, "path": str(p),
                             "has_xmp": sidecar_path(p).exists(),
-                            "missing": not p.exists()} for p in paths]}
+                            "missing": not p.exists()} for p in paths],
+                "folder": folder}
 
     @app.post("/api/process")
     async def process(req: ProcessRequest):
