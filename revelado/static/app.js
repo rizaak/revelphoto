@@ -1,6 +1,13 @@
 const $ = (id) => document.getElementById(id);
 const state = { dir: null, selected: new Set(), results: [] };
 
+// Cargar versión
+fetch("/api/version").then(r => r.json()).then(data => {
+  $("version").textContent = `Revelado ${data.version}`;
+}).catch(() => {
+  $("version").textContent = "Revelado";
+});
+
 function show(section) {
   for (const id of ["browser", "gallery", "progress", "review"])
     $(id).hidden = id !== section;

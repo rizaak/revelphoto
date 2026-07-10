@@ -14,6 +14,8 @@ from pydantic import BaseModel
 
 from revelado.ai import AIUnavailable
 from revelado.config import SETTINGS
+
+VERSION = "2.0.0-dev"
 from revelado.cull import flag_blurry, rank_bursts
 from revelado.drive import list_drive_files
 from revelado.exif import extract_preview_jpeg, read_exif
@@ -93,6 +95,10 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
     @app.get("/")
     def index():
         return FileResponse(_STATIC / "index.html")
+
+    @app.get("/api/version")
+    def get_version():
+        return {"version": VERSION}
 
     @app.get("/api/browse")
     def browse(path: str = ""):
