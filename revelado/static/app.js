@@ -249,6 +249,34 @@ async function learnStyle(dir, btn) {
 
 $("learn-style").onclick = () => learnStyle(state.dir, $("learn-style"));
 
+// Modal para editar estilo.txt
+$("edit-style").onclick = async () => {
+  const modal = $("style-modal");
+  const textarea = $("style-text");
+  const data = await api("/api/style/text");
+  textarea.value = data.text;
+  modal.hidden = false;
+};
+
+$("style-close").onclick = $("style-cancel").onclick = () => {
+  $("style-modal").hidden = true;
+};
+
+$("style-save").onclick = async () => {
+  const text = $("style-text").value;
+  try {
+    await api("/api/style/text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    alert("Estilo guardado ✓");
+    $("style-modal").hidden = true;
+  } catch (e) {
+    alert(`Error al guardar: ${e.message}`);
+  }
+};
+
 $("back").onclick = () => loadDirs(state.dir ? state.dir.split("/").slice(0, -1).join("/") : "");
 $("select-all").onclick = () => {
   document.querySelectorAll(".photo").forEach((el) => {

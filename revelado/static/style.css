@@ -26,6 +26,8 @@ button:disabled { opacity: .4; cursor: default; }
                background: #3b6ef5; border-color: #3b6ef5; }
 .learn-btn { font-size: .75rem; padding: .3rem .6rem; margin-right: .6rem;
              background: #6b4e9c; border-color: #6b4e9c; }
+#edit-style { font-size: .75rem; padding: .3rem .6rem; margin-right: .6rem;
+              background: #5a6b7f; border-color: #5a6b7f; }
 .raw-count { color: #7fb069; font-size: .85rem; }
 #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: .7rem; }
@@ -91,3 +93,17 @@ button.danger:not(:disabled):hover { background: #3a2a2e; }
 .spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #3a3f4a;
            border-top-color: #3b6ef5; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7);
+         display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-content { background: #22252c; border: 1px solid #3a3f4a; border-radius: 8px;
+                 width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; }
+.modal-header { padding: 1rem; border-bottom: 1px solid #3a3f4a; display: flex;
+                justify-content: space-between; align-items: center; }
+.modal-header h3 { margin: 0; }
+.modal-close { background: transparent; border: none; color: #9aa0aa; font-size: 1.5rem;
+               cursor: pointer; padding: 0; width: 2rem; height: 2rem; }
+.modal-close:hover { color: #e8e8e8; }
+#style-text { flex: 1; border: none; background: #16181d; color: #e8e8e8; padding: 1rem;
+              font-family: monospace; font-size: 13px; resize: none; }
+.modal-footer { padding: 1rem; border-top: 1px solid #3a3f4a; display: flex; gap: .8rem;
+                justify-content: flex-end; }

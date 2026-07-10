@@ -50,6 +50,10 @@ class LearnRequest(BaseModel):
     dir: str
 
 
+class StyleTextRequest(BaseModel):
+    text: str
+
+
 class PresetRequest(BaseModel):
     name: str
     prompt: str = ""
@@ -278,6 +282,22 @@ def create_app(job_manager: JobManager | None = None, client_factory=None) -> Fa
             raise HTTPException(502, f"La IA no pudo resumir el estilo: {exc}")
         apply_learned_style(summary)
         return {"count": stats["count"], "summary": summary}
+
+    @app.get("/api/style/text")
+    def style_read():
+        """Lee el contenido actual de estilo.txt."""
+        try:
+            content = SETTINGS.style_path.read_text(encoding="utf-8")
+            return {"text": content}
+        except OSError:
+            return {"text": ""}
+
+    @app.post("/api/style/text")
+    def style_write(req: StyleTextRequest):
+        """Guarda cambios a estilo.txt."""
+        text = req.text.strip()
+        SETTINGS.style_path.write_text(text + "\n" if text else "", encoding="utf-8")
+        return {"text": text}
 
     @app.get("/api/presets")
     def presets_list():
