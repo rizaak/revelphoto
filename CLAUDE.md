@@ -30,6 +30,10 @@ pkill -f "uvicorn revelado.server:app"; nohup ./.venv/bin/python -m uvicorn \
 ```
 
 La clave API vive en `.env` (`ANTHROPIC_API_KEY=...`), cargada por `config.py`.
+Proveedor alternativo: `AI_PROVIDER=google` + `GEMINI_API_KEY` en `.env` usa Gemini
+(`gemini-2.5-flash` por defecto) vía el adaptador `ai_client.py`, que traduce el
+dialecto de Anthropic (imágenes base64 + JSON Schema) completo; `AI_MODEL` pisa
+el modelo por defecto del proveedor.
 Python 3.10 (el Mac de Isaac no tiene 3.11).
 
 ## Arquitectura (el flujo que hay que entender)

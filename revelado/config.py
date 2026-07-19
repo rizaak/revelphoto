@@ -20,11 +20,17 @@ def load_env_file(path: Path = _ROOT / ".env") -> None:
 load_env_file()
 
 
+def default_model_for(provider: str) -> str:
+    """Cada proveedor con su modelo por defecto (AI_MODEL en .env lo pisa)."""
+    return "gemini-2.5-flash" if provider == "google" else "claude-haiku-4-5"
+
+
 @dataclass(frozen=True)
 class Settings:
     port: int = 8420
     ai_provider: str = os.getenv("AI_PROVIDER", "anthropic")  # anthropic, google
-    model: str = os.getenv("AI_MODEL", "claude-haiku-4-5")
+    model: str = os.getenv("AI_MODEL") or default_model_for(
+        os.getenv("AI_PROVIDER", "anthropic"))
     preview_long_edge: int = 1500
     cull_long_edge: int = 3600   # resolución de los recortes de cara para el culling
     thumb_long_edge: int = 400
