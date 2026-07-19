@@ -95,6 +95,7 @@ button.danger:not(:disabled):hover { background: #3a2a2e; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7);
          display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal[hidden] { display: none; }  /* sin esto, display:flex pisa el atributo hidden */
 .modal-content { background: #22252c; border: 1px solid #3a3f4a; border-radius: 8px;
                  width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; }
 .modal-header { padding: 1rem; border-bottom: 1px solid #3a3f4a; display: flex;
