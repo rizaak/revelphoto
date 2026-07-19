@@ -36,6 +36,16 @@ def test_render_is_valid_xml_with_crs_values():
     assert desc.get(f"{{{CRS}}}HasSettings") == "True"
 
 
+def test_render_bloque_de_enfoque_completo():
+    # Sin radio/detalle/máscara Lightroom deja el enfoque inerte (reporte real)
+    root = ET.fromstring(render_xmp(_settings()))
+    desc = root.find(f".//{{{'http://www.w3.org/1999/02/22-rdf-syntax-ns#'}}}Description")
+    assert desc.get(f"{{{CRS}}}Sharpness") == "45"
+    assert desc.get(f"{{{CRS}}}SharpenRadius") == "+1.0"
+    assert desc.get(f"{{{CRS}}}SharpenDetail") == "25"
+    assert desc.get(f"{{{CRS}}}SharpenEdgeMasking") == "0"
+
+
 def test_render_mask_normalization():
     mask = RadialMask(left=0.3, top=0.2, right=0.6, bottom=0.5,
                       exposure_ev=1.0, shadows=25)

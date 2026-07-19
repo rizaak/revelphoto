@@ -99,6 +99,9 @@ def render_xmp(s: DevelopSettings) -> str:
    crs:Whites2012="{_fmt_signed_int(s.whites)}"
    crs:Blacks2012="{_fmt_signed_int(s.blacks)}"
    crs:Sharpness="{s.sharpness}"
+   crs:SharpenRadius="+1.0"
+   crs:SharpenDetail="25"
+   crs:SharpenEdgeMasking="0"
    crs:LuminanceSmoothing="{s.luminance_smoothing}"
    crs:ColorNoiseReduction="{s.color_noise}"
    crs:HasCrop="{'True' if s.has_crop else 'False'}"{crop_attrs}
