@@ -134,6 +134,12 @@ def test_prompt_confia_en_la_estimacion_local_de_enderezado():
     assert "confírmala" in _SYSTEM
 
 
+def test_prompt_culling_excluye_mirada_baja():
+    # Ojos abiertos mirando un libro no son "ojos_cerrados" (falso positivo real)
+    from revelado.ai import _ASSESS_SYSTEM
+    assert "mirada baja" in _ASSESS_SYSTEM
+
+
 def test_assess_faces_devuelve_estados_en_orden():
     from revelado.ai import assess_faces
     client = _client_returning('{"caras": [{"estado": "movida"}, {"estado": "nítida"}]}')

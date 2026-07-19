@@ -190,7 +190,9 @@ _ASSESS_SYSTEM = (
     "recorte decide su estado: 'nítida' (rasgos definidos, sin defecto claro), "
     "'movida' (rastro de movimiento, contornos dobles), 'desenfocada' (fuera "
     "de foco), 'ojos_cerrados' (SOLO si el párpado se ve claramente cerrado; "
-    "entrecerrar al sonreír no cuenta), o 'tapada' (manos u objetos cubriendo "
+    "entrecerrar al sonreír no cuenta, y una mirada baja — leyendo, mirando "
+    "un objeto o al suelo — tampoco: párpado bajo no es párpado cerrado), o "
+    "'tapada' (manos u objetos cubriendo "
     "la cara). Ante la duda entre defecto y no defecto: 'nítida'. Devuelve JSON."
 )
 
